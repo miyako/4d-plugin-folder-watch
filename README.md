@@ -7,4 +7,9 @@ Here is a quick comparision of features:
 
 | |folder-watch|folder-watch-2|
 ---
-|watch multiple paths|⭕️| |
+|watch multiple paths|| |
+
+| First Header  | folder-watch | folder-watch-2 |
+| ------------- | ------------- | ------------- |
+| | ⭕️ | |
+| | ⭕️ | |
