@@ -5,12 +5,8 @@ Unlike [folder-watch](https://github.com/miyako/4d-plugin-folder-watch), which u
 
 Here is a quick comparision of features:
 
-| |folder-watch|folder-watch-2|
----
-|watch multiple paths|| |
-
-| First Header  | folder-watch | folder-watch-2 |
+|  | folder-watch | folder-watch-2 |
 | :------------- | :-------------: | :-------------: |
 | Watch multiple paths | × | ◎ |
-| Watch subfolders | × |: ◎ |
+| Watch subfolders | × | ◎ |
 | OS X minimum version | 10.7 | 10.6 |
