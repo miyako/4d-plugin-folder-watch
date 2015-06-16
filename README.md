@@ -10,7 +10,7 @@ Here is a quick comparision of features:
 |watch multiple paths|| |
 
 | First Header  | folder-watch | folder-watch-2 |
-| ------------- | ------------- | ------------- |
-| watch multiple paths |: × :|: ◎ :|
-| watch subfolders |: × :|: ◎ :|
-| minimum version |: 10.7 :|: 10.6 :|
+| :------------- | :-------------: | :-------------: |
+| Watch multiple paths | × | ◎ |
+| Watch subfolders | × |: ◎ |
+| OS X minimum version | 10.7 | 10.6 |
