@@ -149,7 +149,7 @@ void listenerLoopStart(){
         uint32_t i, length = MONITOR_FOLDER_WATCH_PATH_POSIX.getSize();
         NSMutableArray *paths = [[NSMutableArray alloc]initWithCapacity:length];
         
-        for(i = 0; i < length; ++i){
+        for(i = 1; i < length; ++i){
             NSString *path = MONITOR_FOLDER_WATCH_PATH_POSIX.copyUTF16StringAtIndex(i);
             [paths insertObject:path atIndex:i];
             [path release];
@@ -289,7 +289,7 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
         
         returnValue.setIntValue(1);
         
-        if(MONITOR_FOLDER_WATCH_PATH.getSize()){
+        if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
             
             MONITOR_FOLDER_WATCH_PATH.setSize(0);
             MONITOR_FOLDER_WATCH_PATH_POSIX.setSize(0);
@@ -375,7 +375,7 @@ void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
             MONITOR_FOLDER_WATCH_METHOD.setUTF16String(Param1.getUTF16StringPtr(), Param1.getUTF16Length());
             MONITOR_FOLDER_METHOD_ID = 0;
             
-            if(MONITOR_FOLDER_WATCH_PATH.getSize()){
+            if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
                 PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);  
             }            
         }
@@ -393,7 +393,7 @@ void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
                 MONITOR_FOLDER_WATCH_METHOD.setUTF16String(Param1.getUTF16StringPtr(), Param1.getUTF16Length());
                 MONITOR_FOLDER_METHOD_ID = methodId;
                 
-                if(MONITOR_FOLDER_WATCH_PATH.getSize()){
+                if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
                     PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);  
                     PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);                  
                 }
@@ -429,7 +429,7 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
         
         returnValue.setIntValue(1);
         
-        if(MONITOR_FOLDER_WATCH_PATH.getSize()){
+        if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
             
             MONITOR_FOLDER_WATCH_PATH.setSize(0);
             MONITOR_FOLDER_WATCH_PATH_POSIX.setSize(0);
@@ -447,7 +447,10 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
         
         MONITOR_FOLDER_WATCH_PATH.setSize(0);
         MONITOR_FOLDER_WATCH_PATH_POSIX.setSize(0);
-        
+
+        MONITOR_FOLDER_WATCH_PATH.appendUTF16String(@"");
+        MONITOR_FOLDER_WATCH_PATH_POSIX.appendUTF16String(@""); 
+               
         for(i = 0; i < length; ++i){
         
             NSString *path = Param1.copyPathAtIndex(i);
@@ -459,9 +462,6 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
                 
                 if(isDirectory){
                 
-                    MONITOR_FOLDER_WATCH_PATH.appendUTF16String(@"");
-                    MONITOR_FOLDER_WATCH_PATH_POSIX.appendUTF16String(@"");
-                    
                     MONITOR_FOLDER_WATCH_PATH.appendUTF16String(pathHFS);
                     MONITOR_FOLDER_WATCH_PATH_POSIX.appendUTF16String(path);
                                         
@@ -478,7 +478,7 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 
         }
         
-        if(MONITOR_FOLDER_WATCH_PATH.getSize()){
+        if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
             returnValue.setIntValue(1);
             MONITOR_LATENCY = Param2.getIntValue();
             if(MONITOR_LATENCY < 1){
