@@ -5,5 +5,6 @@ Unlike [folder-watch](https://github.com/miyako/4d-plugin-folder-watch), which u
 
 Here is a quick comparision of features:
 
-||folder-watch|folder-watch-2|
-|watch multiple paths|⭕️||
+| |folder-watch|folder-watch-2|
+---
+|watch multiple paths|⭕️| |
