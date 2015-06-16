@@ -149,9 +149,11 @@ void listenerLoopStart(){
         uint32_t i, length = MONITOR_FOLDER_WATCH_PATH_POSIX.getSize();
         NSMutableArray *paths = [[NSMutableArray alloc]initWithCapacity:length];
         
-        for(i = 1; i < length; ++i){
+        for(i = 0; i < length; ++i){
             NSString *path = MONITOR_FOLDER_WATCH_PATH_POSIX.copyUTF16StringAtIndex(i);
-            [paths insertObject:path atIndex:i];
+            if([path length]){
+                [paths addObject:path];
+            }
             [path release];
         } 
         
