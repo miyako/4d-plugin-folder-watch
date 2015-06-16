@@ -10,3 +10,17 @@ Here is a quick comparision of features:
 | Watch multiple paths | × | ◎ |
 | Watch subfolders | × | ◎ |
 | OS X minimum version | 10.7 | 10.6 |
+
+Examples
+---
+**Register a callback method**
+
+```
+ARRAY TEXT($paths;2)
+$paths{1}:=System folder(Desktop)
+$paths{2}:=System folder(Documents folder)
+
+$success:=FW Set watch paths ($paths)
+```
+
+ 
