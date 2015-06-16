@@ -11,5 +11,6 @@ Here is a quick comparision of features:
 
 | First Header  | folder-watch | folder-watch-2 |
 | ------------- | ------------- | ------------- |
-| multiple paths | × | ◎ |
-| multiple paths | × | ◎ |
+| watch multiple paths |: × :|: ◎ :|
+| watch subfolders |: × :|: ◎ :|
+| minimum version |: 10.7 :|: 10.6 :|
