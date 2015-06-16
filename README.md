@@ -13,7 +13,7 @@ Here is a quick comparision of features:
 
 Examples
 ---
-**Register a callback method**
+**Register folder paths to watch**
 
 ```
 ARRAY TEXT($paths;2)
@@ -23,4 +23,15 @@ $paths{2}:=System folder(Documents folder)
 $success:=FW Set watch paths ($paths)
 ```
 
- 
+In ``$2`` to ``FW Set watch paths`` or ``FW Set watch path``. you can pass an optional ``latency``, which is the number of seconds to wait before an event is sent. By default the latency is 1.0, the maximum is 60.0. A long latency may contribute to better efficiency.
+
+**Install callback method**
+
+```
+$success:=FW Set watch method ("WATCH")
+```
+
+Install method will receive in ``$1`` the path where a change was detected.
+
+If multiple paths are passed, they will be delimiter by 0x0A (line feed).
+
