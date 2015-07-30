@@ -19,7 +19,6 @@ int MONITOR_FOLDER_INVALID_METHOD_NAME_ERROR = -3;
 process_number_t MONITOR_FOLDER_METHOD_PROCESS_ID;
 process_stack_size_t MONITOR_FOLDER_STACK_SIZE;
 process_name_t MONITOR_FOLDER_METHOD_PROCESS_NAME;
-process_name_t ON_EXIT_METHOD_PROCESS_NAME;
 
 method_id_t MONITOR_FOLDER_METHOD_ID;
 
@@ -31,7 +30,6 @@ ARRAY_TEXT MONITOR_FOLDER_WATCH_PATH_POSIX;
 C_TEXT MONITOR_FOLDER_EVENT_PATH;
 C_TEXT MONITOR_FOLDER_WATCH_METHOD;
 C_TEXT MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL;
-C_TEXT ON_EXIT_METHOD_PROCESS_NAME_INTERNAL;
 
 #if VERSIONMAC 
 NSTimeInterval MONITOR_LATENCY;
@@ -63,11 +61,13 @@ void gotEvent(FSEventStreamRef stream,
 
 #endif 
 
-bool isProcessOnExit(){    
+bool IsProcessOnExit(){    
     C_TEXT name;
     PA_long32 state, time;
     PA_GetProcessInfo(PA_GetCurrentProcessNumber(), name, &state, &time);
-    return (0 == PA_CompareUnichars((PA_Unichar *)name.getUTF16StringPtr(), ON_EXIT_METHOD_PROCESS_NAME, 1, 0));
+    CUTF16String procName(name.getUTF16StringPtr());
+    CUTF16String exitProcName((PA_Unichar *)"$\0x\0x\0");
+    return (!procName.compare(exitProcName));
 }
 
 void generateUuid(C_TEXT &returnValue){
@@ -91,18 +91,14 @@ void listenerOnInitPlugin(){
     CUTF8String name((const uint8_t *)"$FOLDER_WATCH_II");
     MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL.setUTF8String(&name);
     MONITOR_FOLDER_METHOD_PROCESS_NAME = (process_name_t)MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL.getUTF16StringPtr();
-    
-    CUTF8String on_exit_name((const uint8_t *)"$xx");    
-    ON_EXIT_METHOD_PROCESS_NAME_INTERNAL.setUTF8String(&on_exit_name);
-    ON_EXIT_METHOD_PROCESS_NAME = (process_name_t)ON_EXIT_METHOD_PROCESS_NAME_INTERNAL.getUTF16StringPtr();
-    
+        
     MONITOR_FOLDER_METHOD_PROCESS_ID = 0;
     MONITOR_FOLDER_STACK_SIZE = 0;
     MONITOR_FOLDER_METHOD_ID = 0;
 }
 
 void listenerOnCloseProcess(){
-    if(isProcessOnExit()){
+    if(IsProcessOnExit()){
         PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL); 
     }
 }
