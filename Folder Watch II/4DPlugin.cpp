@@ -61,15 +61,6 @@ void gotEvent(FSEventStreamRef stream,
 
 #endif 
 
-bool IsProcessOnExit(){    
-    C_TEXT name;
-    PA_long32 state, time;
-    PA_GetProcessInfo(PA_GetCurrentProcessNumber(), name, &state, &time);
-    CUTF16String procName(name.getUTF16StringPtr());
-    CUTF16String exitProcName((PA_Unichar *)"$\0x\0x\0");
-    return (!procName.compare(exitProcName));
-}
-
 void generateUuid(C_TEXT &returnValue){
 
 #if VERSIONMAC
@@ -86,6 +77,15 @@ void generateUuid(C_TEXT &returnValue){
 }
 
 #pragma mark -
+
+bool IsProcessOnExit(){    
+    C_TEXT name;
+    PA_long32 state, time;
+    PA_GetProcessInfo(PA_GetCurrentProcessNumber(), name, &state, &time);
+    CUTF16String procName(name.getUTF16StringPtr());
+    CUTF16String exitProcName((PA_Unichar *)"$\0x\0x\0\0\0");
+    return (!procName.compare(exitProcName));
+}
 
 void OnStartup(){
     CUTF8String name((const uint8_t *)"$FOLDER_WATCH_II");
@@ -184,7 +184,7 @@ void listenerLoopStart(){
 void listenerLoopFinish(){
 
     if(MONITOR_FOLDER_METHOD_PROCESS_ID){
-        
+        //uninstall handler
 #if VERSIONMAC  
         FSEventStreamStop(MONITOR_STREAM);
         FSEventStreamUnscheduleFromRunLoop (MONITOR_STREAM, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
@@ -194,11 +194,11 @@ void listenerLoopFinish(){
 #else
         
 #endif 
-        
+        //set flags
         MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE = true;
         MONITOR_FOLDER_METHOD_PROCESS_SHOULD_EXECUTE_METHOD = false;
-        PA_UnfreezeProcess(MONITOR_FOLDER_METHOD_PROCESS_ID);         
-        
+        PA_YieldAbsolute();  
+        //tell listener to die      
         while(MONITOR_FOLDER_METHOD_PROCESS_ID){
             PA_YieldAbsolute();
             PA_UnfreezeProcess(MONITOR_FOLDER_METHOD_PROCESS_ID);
