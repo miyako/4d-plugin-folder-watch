@@ -87,7 +87,7 @@ void generateUuid(C_TEXT &returnValue){
 
 #pragma mark -
 
-void listenerOnInitPlugin(){
+void OnStartup(){
     CUTF8String name((const uint8_t *)"$FOLDER_WATCH_II");
     MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL.setUTF8String(&name);
     MONITOR_FOLDER_METHOD_PROCESS_NAME = (process_name_t)MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL.getUTF16StringPtr();
@@ -97,7 +97,7 @@ void listenerOnInitPlugin(){
     MONITOR_FOLDER_METHOD_ID = 0;
 }
 
-void listenerOnCloseProcess(){
+void OnCloseProcess(){
     if(IsProcessOnExit()){
         PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL); 
     }
@@ -126,10 +126,13 @@ void listenerLoop(){
 
         }
 
-        PA_FreezeProcess(MONITOR_FOLDER_METHOD_PROCESS_ID);  
+        if(!MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE){
+            PA_FreezeProcess(PA_GetCurrentProcessNumber());  
+        }else{
+            MONITOR_FOLDER_METHOD_PROCESS_ID = 0;
+        }
     }
     PA_KillProcess();
-    MONITOR_FOLDER_METHOD_PROCESS_ID = 0; 
 }
 
 void listenerLoopStart(){
@@ -198,6 +201,7 @@ void listenerLoopFinish(){
         
         while(MONITOR_FOLDER_METHOD_PROCESS_ID){
             PA_YieldAbsolute();
+            PA_UnfreezeProcess(MONITOR_FOLDER_METHOD_PROCESS_ID);
         }
     }
 } 
@@ -246,6 +250,16 @@ void CommandDispatcher (PA_long32 pProcNum, sLONG_PTR *pResult, PackagePtr pPara
 {
 	switch(pProcNum)
 	{
+    
+        case kInitPlugin :
+        case kServerInitPlugin :            
+            OnStartup();
+            break;    
+
+        case kCloseProcess :            
+            OnCloseProcess();
+            break;  
+                
 // --- Settings
 
 		case 1 :
