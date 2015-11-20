@@ -223,7 +223,7 @@ void listenerLoopExecuteMethod(){
         
         PA_ExecuteMethodByID(MONITOR_FOLDER_METHOD_ID, params, 1);
         
-        PA_DisposeUnistring(&path);
+        //PA_DisposeUnistring(&path);//removed 15.11.20 (clear will dispose string too)
         
         PA_ClearVariable(&params[0]);//added 15.11.19
     }
