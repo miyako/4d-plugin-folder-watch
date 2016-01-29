@@ -12,28 +12,35 @@
 #include "4DPluginAPI.h"
 #include "4DPlugin.h"
 
-int MONITOR_FOLDER_NOT_FOLDER_ERROR = -1;
-int MONITOR_FOLDER_INVALID_PATH_ERROR = -2;
-int MONITOR_FOLDER_INVALID_METHOD_NAME_ERROR = -3;
+namespace FW2
+{
+    process_name_t MONITOR_PROCESS_NAME = (PA_Unichar *)"$\0F\0O\0L\0D\0E\0R\0_\0W\0A\0T\0C\0H\0_\0I\0I\0\0\0";
+				process_number_t MONITOR_PROCESS_ID = 0;
+    process_stack_size_t MONITOR_PROCESS_STACK_SIZE = 0;
+    method_id_t CALLBACK_METHOD_ID = 0;
+				bool MONITOR_PROCESS_SHOULD_TERMINATE;
+				C_TEXT LISTENER_METHOD;
+				C_TEXT WATCH_PATH;
+				C_TEXT WATCH_METHOD;
+				NSTimeInterval MONITOR_LATENCY;
+				FSEventStreamRef MONITOR_STREAM;
+				ARRAY_TEXT WATCH_PATHS;
+				ARRAY_TEXT WATCH_PATHS_POSIX;
+				std::vector<CUTF16String>CALLBACK_EVENT_PATHS;
+				std::vector<NSTimeInterval>CALLBACK_EVENT_IDS;
+}
 
-process_number_t MONITOR_FOLDER_METHOD_PROCESS_ID;
-process_stack_size_t MONITOR_FOLDER_STACK_SIZE;
-process_name_t MONITOR_FOLDER_METHOD_PROCESS_NAME;
+void generateUuid(C_TEXT &returnValue)
+{
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+    returnValue.setUTF16String([[[NSUUID UUID]UUIDString]stringByReplacingOccurrencesOfString:@"-" withString:@""]);
+#else
+    CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
+    NSString *uuid_str = (NSString *)CFUUIDCreateString(kCFAllocatorDefault, uuid);
+    returnValue.setUTF16String([uuid_str stringByReplacingOccurrencesOfString:@"-" withString:@""]);
+#endif
+}
 
-method_id_t MONITOR_FOLDER_METHOD_ID;
-
-bool MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE;
-bool MONITOR_FOLDER_METHOD_PROCESS_SHOULD_EXECUTE_METHOD;
-
-ARRAY_TEXT MONITOR_FOLDER_WATCH_PATH;
-ARRAY_TEXT MONITOR_FOLDER_WATCH_PATH_POSIX;
-C_TEXT MONITOR_FOLDER_EVENT_PATH;
-C_TEXT MONITOR_FOLDER_WATCH_METHOD;
-C_TEXT MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL;
-
-#if VERSIONMAC 
-NSTimeInterval MONITOR_LATENCY;
-FSEventStreamRef MONITOR_STREAM;
 void gotEvent(FSEventStreamRef stream, 
                  void *callbackInfo, 
                  size_t numEvents, 
@@ -45,40 +52,43 @@ void gotEvent(FSEventStreamRef stream,
     NSArray *paths = (NSArray *)(CFArrayRef)eventPaths;         
     NSMutableString *pathsString = [[NSMutableString alloc]init];
     
-    for(uint32_t i = 0; i < [paths count] ; ++i){
-        if(i){
+    for(uint32_t i = 0; i < [paths count] ; ++i)
+				{
+        if(i)
+								{
             [pathsString appendString:@"\n"];    
         }
-        [pathsString appendString:(NSString *)[paths objectAtIndex:i]];
+								NSURL *u = (NSURL *)CFURLCreateWithFileSystemPath(kCFAllocatorDefault, (CFStringRef)[paths objectAtIndex:i], kCFURLPOSIXPathStyle, false);
+								if(u)
+								{
+												NSString *path = (NSString *)CFURLCopyFileSystemPath((CFURLRef)u, kCFURLHFSPathStyle);
+												[pathsString appendString:(NSString *)path];
+												[path release];
+								}
     }
-               
-    MONITOR_FOLDER_EVENT_PATH.setUTF16String(pathsString);
+				
+				uint32_t len = [pathsString length];
+				uint32_t size = (len * sizeof(PA_Unichar)) + sizeof(PA_Unichar);
+				std::vector<uint8_t> buf(size);	
+				CUTF16String event_path;
+				
+				if([pathsString getCString:(char *)&buf[0] maxLength:size encoding:NSUnicodeStringEncoding])
+				{
+								event_path = CUTF16String((const PA_Unichar *)&buf[0], len);
+								FW2::CALLBACK_EVENT_PATHS.push_back(event_path);
+								FW2::CALLBACK_EVENT_IDS.push_back([[NSDate date]timeIntervalSince1970]);
+				}
+				
     [pathsString release];
     
-    listenerLoopExecute();
-}
-#else
-
-#endif 
-
-void generateUuid(C_TEXT &returnValue){
-
-#if VERSIONMAC
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
-    returnValue.setUTF16String([[[NSUUID UUID]UUIDString]stringByReplacingOccurrencesOfString:@"-" withString:@""]);
-#else
-    CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
-    NSString *uuid_str = (NSString *)CFUUIDCreateString(kCFAllocatorDefault, uuid);
-    returnValue.setUTF16String([uuid_str stringByReplacingOccurrencesOfString:@"-" withString:@""]);
-#endif    
-#else
-
-#endif
+				if(event_path.size())
+								listenerLoopExecute();
 }
 
 #pragma mark -
 
-bool IsProcessOnExit(){    
+bool IsProcessOnExit()
+{
     C_TEXT name;
     PA_long32 state, time;
     PA_GetProcessInfo(PA_GetCurrentProcessNumber(), name, &state, &time);
@@ -87,69 +97,66 @@ bool IsProcessOnExit(){
     return (!procName.compare(exitProcName));
 }
 
-void OnStartup(){
-    CUTF8String name((const uint8_t *)"$FOLDER_WATCH_II");
-    MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL.setUTF8String(&name);
-    MONITOR_FOLDER_METHOD_PROCESS_NAME = (process_name_t)MONITOR_FOLDER_METHOD_PROCESS_NAME_INTERNAL.getUTF16StringPtr();
-        
-    MONITOR_FOLDER_METHOD_PROCESS_ID = 0;
-    MONITOR_FOLDER_STACK_SIZE = 0;
-    MONITOR_FOLDER_METHOD_ID = 0;
+void OnStartup()
+{
+
 }
 
-void OnCloseProcess(){
-    if(IsProcessOnExit()){
+void OnCloseProcess()
+{
+    if(IsProcessOnExit())
+				{
         PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL); 
     }
 }
 
 #pragma mark -
 
-void listenerLoop(){
-    
-    MONITOR_FOLDER_METHOD_PROCESS_SHOULD_EXECUTE_METHOD = false;
-    MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE = false;
+void listenerLoop()
+{
+    FW2::MONITOR_PROCESS_SHOULD_TERMINATE = false;
         
-    while(!MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE)
+    while(!FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
     { 
         PA_YieldAbsolute();
         
-        if(MONITOR_FOLDER_METHOD_PROCESS_SHOULD_EXECUTE_METHOD){
-            
-            MONITOR_FOLDER_METHOD_PROCESS_SHOULD_EXECUTE_METHOD = false;
-            
+								while(FW2::CALLBACK_EVENT_IDS.size())
+								{
             C_TEXT processName;
             generateUuid(processName);
             PA_NewProcess((void *)listenerLoopExecuteMethod, 
-                          MONITOR_FOLDER_STACK_SIZE, 
-                          (PA_Unichar *)processName.getUTF16StringPtr());        
-
-        }
-
-        if(!MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE){
+                          FW2::MONITOR_PROCESS_STACK_SIZE, 
+                          (PA_Unichar *)processName.getUTF16StringPtr());
+												
+												if(FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+																break;
+								}
+								
+        if(!FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+								{
             PA_FreezeProcess(PA_GetCurrentProcessNumber());  
         }else{
-            MONITOR_FOLDER_METHOD_PROCESS_ID = 0;
+            FW2::MONITOR_PROCESS_ID = 0;
         }
     }
     PA_KillProcess();
 }
 
-void listenerLoopStart(){
-
-    if(!MONITOR_FOLDER_METHOD_PROCESS_ID){
-        
-        MONITOR_FOLDER_METHOD_PROCESS_ID = PA_NewProcess((void *)listenerLoop, 
-                                                         MONITOR_FOLDER_STACK_SIZE, 
-                                                         MONITOR_FOLDER_METHOD_PROCESS_NAME);  
+void listenerLoopStart()
+{
+    if(!FW2::MONITOR_PROCESS_ID)
+				{
+        FW2::MONITOR_PROCESS_ID = PA_NewProcess((void *)listenerLoop, 
+                                                         FW2::MONITOR_PROCESS_STACK_SIZE, 
+                                                         FW2::MONITOR_PROCESS_NAME);  
         
 #if VERSIONMAC  
 
-        uint32_t i, length = MONITOR_FOLDER_WATCH_PATH_POSIX.getSize();
+        uint32_t i, length = FW2::WATCH_PATHS_POSIX.getSize();
         NSMutableArray *paths = [[NSMutableArray alloc]initWithCapacity:length];
         
         for(i = 0; i < length; ++i){
-            NSString *path = MONITOR_FOLDER_WATCH_PATH_POSIX.copyUTF16StringAtIndex(i);
+            NSString *path = FW2::WATCH_PATHS_POSIX.copyUTF16StringAtIndex(i);
             if([path length]){
                 [paths addObject:path];
             }
@@ -157,9 +164,9 @@ void listenerLoopStart(){
         } 
         
         FSEventStreamContext context = {0, NULL, NULL, NULL, NULL};
-        NSTimeInterval latency = MONITOR_LATENCY;
+        NSTimeInterval latency = FW2::MONITOR_LATENCY;
         
-        MONITOR_STREAM = FSEventStreamCreate(NULL,
+        FW2::MONITOR_STREAM = FSEventStreamCreate(NULL,
             (FSEventStreamCallback)gotEvent,
             &context,
             (CFArrayRef)paths,
@@ -171,8 +178,8 @@ void listenerLoopStart(){
             | kFSEventStreamCreateFlagIgnoreSelf
         );
           
-        FSEventStreamScheduleWithRunLoop(MONITOR_STREAM, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-        FSEventStreamStart(MONITOR_STREAM);
+        FSEventStreamScheduleWithRunLoop(FW2::MONITOR_STREAM, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+        FSEventStreamStart(FW2::MONITOR_STREAM);
         
         [paths release];
 #else
@@ -181,53 +188,69 @@ void listenerLoopStart(){
     }
 }
 
-void listenerLoopFinish(){
+void listenerLoopFinish()
+{
 
-    if(MONITOR_FOLDER_METHOD_PROCESS_ID){
+    if(FW2::MONITOR_PROCESS_ID)
+				{
         //uninstall handler
 #if VERSIONMAC  
-        FSEventStreamStop(MONITOR_STREAM);
-        FSEventStreamUnscheduleFromRunLoop (MONITOR_STREAM, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-        FSEventStreamInvalidate(MONITOR_STREAM);
-        FSEventStreamRelease(MONITOR_STREAM);
-        MONITOR_STREAM = 0;
+        FSEventStreamStop(FW2::MONITOR_STREAM);
+        FSEventStreamUnscheduleFromRunLoop (FW2::MONITOR_STREAM, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+        FSEventStreamInvalidate(FW2::MONITOR_STREAM);
+        FSEventStreamRelease(FW2::MONITOR_STREAM);
+        FW2::MONITOR_STREAM = 0;
 #else
         
 #endif 
         //set flags
-        MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE = true;
-        MONITOR_FOLDER_METHOD_PROCESS_SHOULD_EXECUTE_METHOD = false;
-        PA_YieldAbsolute();  
+        FW2::MONITOR_PROCESS_SHOULD_TERMINATE = true;
+        PA_YieldAbsolute();
+								FW2::WATCH_PATHS.setSize(0);
+								FW2::WATCH_PATHS_POSIX.setSize(0);
+								FW2::CALLBACK_METHOD_ID = 0;
+								FW2::CALLBACK_EVENT_PATHS.clear();
+								FW2::CALLBACK_EVENT_IDS.clear();
         //tell listener to die      
-        while(MONITOR_FOLDER_METHOD_PROCESS_ID){
+        while(FW2::MONITOR_PROCESS_ID)
+								{
             PA_YieldAbsolute();
-            PA_UnfreezeProcess(MONITOR_FOLDER_METHOD_PROCESS_ID);
+            PA_UnfreezeProcess(FW2::MONITOR_PROCESS_ID);
         }
     }
 } 
 
-void listenerLoopExecute(){
-    MONITOR_FOLDER_METHOD_PROCESS_SHOULD_TERMINATE = false;
-    MONITOR_FOLDER_METHOD_PROCESS_SHOULD_EXECUTE_METHOD = true;
-    PA_UnfreezeProcess(MONITOR_FOLDER_METHOD_PROCESS_ID);
+void listenerLoopExecute()
+{
+    FW2::MONITOR_PROCESS_SHOULD_TERMINATE = false;
+    PA_UnfreezeProcess(FW2::MONITOR_PROCESS_ID);
 }
 
-void listenerLoopExecuteMethod(){
-    
-    if(MONITOR_FOLDER_METHOD_ID){
-        
-        PA_Variable	params[1];
-        params[0] = PA_CreateVariable(eVK_Unistring);	 
-        PA_Unistring path = PA_CreateUnistring((PA_Unichar *)MONITOR_FOLDER_EVENT_PATH.getUTF16StringPtr());
+void listenerLoopExecuteMethod()
+{
+				std::vector<CUTF16String>::iterator p = FW2::CALLBACK_EVENT_PATHS.begin();
+				std::vector<NSTimeInterval>::iterator e = FW2::CALLBACK_EVENT_IDS.begin();
+				double ts = *e;
+    CUTF16String event_path = *p;
+				
+    if(FW2::CALLBACK_METHOD_ID)
+				{
+        PA_Variable	params[2];
+        params[0] = PA_CreateVariable(eVK_Unistring);
+        PA_Unistring path = PA_CreateUnistring((PA_Unichar *)event_path.c_str());
         PA_SetStringVariable(&params[0], &path);
-        
-        PA_ExecuteMethodByID(MONITOR_FOLDER_METHOD_ID, params, 1);
-        
+								PA_SetRealVariable(&params[1], ts);
+								params[1] = PA_CreateVariable(eVK_Real);
+								FW2::CALLBACK_EVENT_IDS.erase(e);
+								FW2::CALLBACK_EVENT_PATHS.erase(p);
+        PA_ExecuteMethodByID(FW2::CALLBACK_METHOD_ID, params, 2);
         //PA_DisposeUnistring(&path);//removed 15.11.20 (clear will dispose string too)
-        
         PA_ClearVariable(&params[0]);//added 15.11.19
-    }
-    
+								PA_ClearVariable(&params[1]);
+    }else{
+								FW2::CALLBACK_EVENT_IDS.erase(e);
+								FW2::CALLBACK_EVENT_PATHS.erase(p);
+				}
 }
 
 #pragma mark -
@@ -294,25 +317,18 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 {
     C_TEXT Param1;
     C_LONGINT Param2;
-	C_LONGINT returnValue;
+				C_LONGINT returnValue;
 
-	Param1.fromParamAtIndex(pParams, 1);
+				Param1.fromParamAtIndex(pParams, 1);
     Param2.fromParamAtIndex(pParams, 2);
     
-    if(!Param1.getUTF16Length()){
-        
+    if(!Param1.getUTF16Length())
+				{
+								//empty string passed
         returnValue.setIntValue(1);
-        
-        if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
-            
-            MONITOR_FOLDER_WATCH_PATH.setSize(0);
-            MONITOR_FOLDER_WATCH_PATH_POSIX.setSize(0);
-            
-            if(MONITOR_FOLDER_WATCH_METHOD.getUTF16Length()){
-                PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
-            } 
-        }
-
+								if(FW2::WATCH_METHOD.getUTF16Length())
+												PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
+								
     }else{
     
 #if VERSIONMAC    
@@ -323,31 +339,31 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
             
         if([[NSFileManager defaultManager]fileExistsAtPath:path isDirectory:&isDirectory]){
             
-            if(isDirectory){
-                
+            if(isDirectory)
+												{
                 returnValue.setIntValue(1); 
                 
-                MONITOR_LATENCY = Param2.getIntValue();
-                if(MONITOR_LATENCY < 1){
-                    MONITOR_LATENCY = 1.0;
+                FW2::MONITOR_LATENCY = Param2.getIntValue();
+                if(FW2::MONITOR_LATENCY < 1){
+                    FW2::MONITOR_LATENCY = 1.0;
                 }
-                if(MONITOR_LATENCY > 60){
-                    MONITOR_LATENCY = 60.0;
+                if(FW2::MONITOR_LATENCY > 60){
+                    FW2::MONITOR_LATENCY = 60.0;
                 }
             
-                MONITOR_FOLDER_WATCH_PATH.setSize(0);
-                MONITOR_FOLDER_WATCH_PATH.appendUTF16String(@"");
-                MONITOR_FOLDER_WATCH_PATH.appendUTF16String(pathHFS);
+																if(FW2::WATCH_METHOD.getUTF16Length())
+																				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
+												
+                FW2::WATCH_PATHS.setSize(0);
+                FW2::WATCH_PATHS.appendUTF16String(@"");
+                FW2::WATCH_PATHS.appendUTF16String(pathHFS);
                 
-                MONITOR_FOLDER_WATCH_PATH_POSIX.setSize(0);
-                MONITOR_FOLDER_WATCH_PATH_POSIX.appendUTF16String(@"");
-                MONITOR_FOLDER_WATCH_PATH_POSIX.appendUTF16String(path);
-                
-                if(MONITOR_FOLDER_WATCH_METHOD.getUTF16Length()){
-                    PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL); 
-                    PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);         
-                }
-                
+                FW2::WATCH_PATHS_POSIX.setSize(0);
+                FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
+                FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
+																
+																PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);//restart always
+																
             }else{
                 returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
             }
@@ -370,7 +386,7 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 
 void FW_GET_WATCH_PATHS(sLONG_PTR *pResult, PackagePtr pParams)
 {
-	MONITOR_FOLDER_WATCH_PATH.toParamAtIndex(pParams, 1);
+	FW2::WATCH_PATHS.toParamAtIndex(pParams, 1);
 }
 
 void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
@@ -380,46 +396,29 @@ void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
 
 	Param1.fromParamAtIndex(pParams, 1);
 
-    if(!Param1.getUTF16Length()){
-        
+    if(!Param1.getUTF16Length())
+				{
+								//empty string passed
         returnValue.setIntValue(1);
-        
-        if(MONITOR_FOLDER_WATCH_METHOD.getUTF16Length()){
-            
-            MONITOR_FOLDER_WATCH_METHOD.setUTF16String(Param1.getUTF16StringPtr(), Param1.getUTF16Length());
-            MONITOR_FOLDER_METHOD_ID = 0;
-            
-            if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
-                PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);  
-            }            
-        }
-
+        FW2::CALLBACK_METHOD_ID = 0;
+								FW2::WATCH_METHOD.setUTF16String((PA_Unichar *)"\0\0", 0);
+								
     }else{  
         
         method_id_t methodId = PA_GetMethodID((PA_Unichar *)Param1.getUTF16StringPtr());
         
-        if(methodId){
-            
+        if(methodId)
+								{
             returnValue.setIntValue(1);
             
-            if(methodId != MONITOR_FOLDER_METHOD_ID){
-                
-                MONITOR_FOLDER_WATCH_METHOD.setUTF16String(Param1.getUTF16StringPtr(), Param1.getUTF16Length());
-                MONITOR_FOLDER_METHOD_ID = methodId;
-                
-                if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
-                    PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);  
-                    PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);                  
-                }
-
+            if(methodId != FW2::CALLBACK_METHOD_ID)
+												{
+                FW2::WATCH_METHOD.setUTF16String(Param1.getUTF16StringPtr(), Param1.getUTF16Length());
+                FW2::CALLBACK_METHOD_ID = methodId;
             }
-            
         }else{
-            
             returnValue.setIntValue(MONITOR_FOLDER_INVALID_METHOD_NAME_ERROR);
-            
         }
-      
     }
   
 	returnValue.setReturn(pResult);
@@ -427,31 +426,33 @@ void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
 
 void FW_Get_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
 {
-	MONITOR_FOLDER_WATCH_METHOD.setReturn(pResult);
+	FW2::WATCH_METHOD.setReturn(pResult);
 }
 
 void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 {
-	ARRAY_TEXT Param1;
+				ARRAY_TEXT Param1;
     C_LONGINT Param2;
-	C_LONGINT returnValue;
+				C_LONGINT returnValue;
     
-	Param1.fromParamAtIndex(pParams, 1);
+				Param1.fromParamAtIndex(pParams, 1);
     Param2.fromParamAtIndex(pParams, 2);
-    
-    if(!Param1.getSize()){
-        
+				
+				bool isEmpty = !Param1.getSize();
+				
+				if(Param1.getSize() == 1)
+				{
+								NSString *e1 = Param1.copyUTF16StringAtIndex(1);
+								isEmpty = isEmpty || [e1 length];
+								[e1 release];
+				}
+				
+    if(isEmpty)
+				{
+								//empty array passed
         returnValue.setIntValue(1);
-        
-        if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
-            
-            MONITOR_FOLDER_WATCH_PATH.setSize(0);
-            MONITOR_FOLDER_WATCH_PATH_POSIX.setSize(0);
-            
-            if(MONITOR_FOLDER_WATCH_METHOD.getUTF16Length()){
-                PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
-            } 
-        }
+								if(FW2::WATCH_METHOD.getUTF16Length())
+												PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
 
     }else{
     
@@ -459,11 +460,13 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 
         uint32_t i, length = Param1.getSize();
         
-        MONITOR_FOLDER_WATCH_PATH.setSize(0);
-        MONITOR_FOLDER_WATCH_PATH_POSIX.setSize(0);
+								if(FW2::WATCH_METHOD.getUTF16Length())
+												PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
 
-        MONITOR_FOLDER_WATCH_PATH.appendUTF16String(@"");
-        MONITOR_FOLDER_WATCH_PATH_POSIX.appendUTF16String(@""); 
+        FW2::WATCH_PATHS.setSize(0);
+        FW2::WATCH_PATHS_POSIX.setSize(0);
+        FW2::WATCH_PATHS.appendUTF16String(@"");
+        FW2::WATCH_PATHS_POSIX.appendUTF16String(@""); 
                
         for(i = 0; i < length; ++i){
         
@@ -474,10 +477,10 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
             
             if([[NSFileManager defaultManager]fileExistsAtPath:path isDirectory:&isDirectory]){
                 
-                if(isDirectory){
-                
-                    MONITOR_FOLDER_WATCH_PATH.appendUTF16String(pathHFS);
-                    MONITOR_FOLDER_WATCH_PATH_POSIX.appendUTF16String(path);
+                if(isDirectory)
+																{
+                    FW2::WATCH_PATHS.appendUTF16String(pathHFS);
+                    FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
                                         
                 }else{
                     returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
@@ -492,21 +495,21 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 
         }
         
-        if(MONITOR_FOLDER_WATCH_PATH.getSize() > 1){
+        if(FW2::WATCH_PATHS.getSize() > 1)
+								{
             returnValue.setIntValue(1);
-            MONITOR_LATENCY = Param2.getIntValue();
-            if(MONITOR_LATENCY < 1){
-                MONITOR_LATENCY = 1.0;
+            FW2::MONITOR_LATENCY = Param2.getIntValue();
+            if(FW2::MONITOR_LATENCY < 1)
+												{
+                FW2::MONITOR_LATENCY = 1.0;
             }
-            if(MONITOR_LATENCY > 60){
-                MONITOR_LATENCY = 60.0;
+            if(FW2::MONITOR_LATENCY > 60)
+												{
+                FW2::MONITOR_LATENCY = 60.0;
             }
-            if(MONITOR_FOLDER_WATCH_METHOD.getUTF16Length()){
-                PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL); 
-                PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);         
-            }        
-        }                        
-
+												
+												PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);
+        }
 #else
         
 #endif    

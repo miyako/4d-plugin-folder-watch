@@ -30,3 +30,7 @@ typedef PA_long32 process_number_t;
 typedef PA_long32 process_stack_size_t;
 typedef PA_long32 method_id_t;
 typedef PA_Unichar* process_name_t;
+
+#define MONITOR_FOLDER_NOT_FOLDER_ERROR (-1)
+#define MONITOR_FOLDER_INVALID_PATH_ERROR (-2)
+#define MONITOR_FOLDER_INVALID_METHOD_NAME_ERROR (-3)
