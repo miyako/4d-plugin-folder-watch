@@ -19,6 +19,18 @@ Here is a quick comparision of features:
 | Watch subfolders | × | ◎ |
 | OS X minimum version | 10.7 | 10.6 |
 
+Commands
+---
+
+```c
+// --- Settings
+FW_Set_watch_path
+FW_GET_WATCH_PATHS
+FW_Set_watch_method
+FW_Get_watch_method
+FW_Set_watch_paths
+```
+
 Examples
 ---
 **Register folder paths to watch**
