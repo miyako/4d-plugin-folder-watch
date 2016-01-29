@@ -33,26 +33,52 @@ FW_Set_watch_paths
 
 Examples
 ---
-**Register folder paths to watch**
 
 ```
-ARRAY TEXT($paths;2)
-$paths{1}:=System folder(Desktop)
-$paths{2}:=System folder(Documents folder)
+FW GET WATCH PATHS ($folders)
+If (Size of array($folders)=0)
+$folder:=System folder(Desktop)
+Else 
+$folder:=$folders{1}
+End if 
 
-$success:=FW Set watch paths ($paths)
+$folder:=Select folder("Where do you want to watch?";$folder;Use sheet window)
+
+If (OK=1)
+
+APPEND TO ARRAY($folders;$folder)
+$success:=FW Set watch paths ($folders)
+$success:=FW Set watch method ("FOLDER_METHOD_CALLED_ON_EVENT")
+
+End if 
 ```
 
 In ``$2`` to ``FW Set watch paths`` or ``FW Set watch path``, you can pass an optional ``latency``, which is the number of seconds to wait before an event is sent. By default the latency is 1.0, the maximum is 60.0. A longer latency may contribute to better efficiency.
 
-**Install callback method**
-
 ```
-$success:=FW Set watch method ("WATCH")
+  //FOLDER_METHOD_CALLED_ON_EVENT
+
+C_TEXT($1)
+C_REAL($2)
+
+$watchpaths:=$1
+$unixtime:=$2
+
+$i:=1
+
+ARRAY LONGINT($pos;0)
+ARRAY LONGINT($len;0)
+
+ARRAY TEXT(<>DOCUMENTS;0)
+
+While (Match regex("(.+)";$watchpaths;$i;$pos;$len))
+APPEND TO ARRAY(<>DOCUMENTS;Substring($watchpaths;$pos{1};$len{1}))
+$i:=$pos{1}+$len{1}
+End while 
+
+CALL PROCESS(-1)
 ```
 
-Install method will receive in ``$1`` the path where a change was detected.
-
-If multiple paths are passed, they will be delimiter by 0x0A (line feed).
+Callback method will receive in ``$1`` the path where a change was detected. If multiple paths are passed, they will be delimiter by 0x0A (line feed).
 
 **Compatibility notice**: Paths are now represented in HFS format; previously they were POSIX.
