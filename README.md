@@ -55,4 +55,4 @@ Install method will receive in ``$1`` the path where a change was detected.
 
 If multiple paths are passed, they will be delimiter by 0x0A (line feed).
 
-*Compatibility notice*: Paths are now represented in HFS format; previously they were POSIX.
+**Compatibility notice**: Paths are now represented in HFS format; previously they were POSIX.
