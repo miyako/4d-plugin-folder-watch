@@ -25,7 +25,7 @@ Here is a quick comparision of features:
 
 ###Commands
 
-```c
+```
 FW Set watch path
 FW GET WATCH PATHS
 FW Set watch method
