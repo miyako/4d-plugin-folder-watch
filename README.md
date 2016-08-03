@@ -60,11 +60,25 @@ The callback method is called with 3 parameters; TEXT, REAL, TEXT.
 
 The flags indicate what exactly happend at the path.
 
+List of flags 
+
+```c
+Folder Item created 256
+Folder Item removed 512
+Folder Item meta modified 1024
+Folder Item renamed 2048
+Folder Item modified 4096
+Folder Item info modified 8192
+Folder Item owner changed 16384
+Folder Item attribute modified 32768
+Folder Item is file 65536
+Folder Item is directory 131072
+Folder Item is symlink 262144
+```
+
 ###Example Callback
 
 ```
-  //FOLDER_METHOD_CALLED_ON_EVENT
-
 C_TEXT($1)
 C_REAL($2)
 C_TEXT($3)
@@ -76,88 +90,23 @@ C_LONGINT($pos;$len)
 ARRAY LONGINT($flags;0)
 $i:=1
 While (Match regex("\\d+";$3;$i;$pos;$len))
-APPEND TO ARRAY($flags;Num(Substring($3;$pos;$len)))
-$i:=$pos+$len
+  APPEND TO ARRAY($flags;Num(Substring($3;$pos;$len)))
+  $i:=$pos+$len
 End while 
 
 ARRAY TEXT($paths;0)
 $i:=1
 While (Match regex(".+";$1;$i;$pos;$len))
-APPEND TO ARRAY($paths;Substring($1;$pos;$len))
-$i:=$pos+$len
+  APPEND TO ARRAY($paths;Substring($1;$pos;$len))
+  $i:=$pos+$len
 End while 
-
-ARRAY TEXT($events;0)
-
-For ($i;1;Size of array($flags))
-
-APPEND TO ARRAY($events;"")
-
-If ($flags{$i} & Folder Item created)#0
-$events{$i}:=$events{$i}+"create, "
-End if 
-
-If ($flags{$i} & Folder Item removed)#0
-$events{$i}:=$events{$i}+"remove, "
-End if 
-
-If ($flags{$i} & Folder Item renamed)#0
-$events{$i}:=$events{$i}+"rename, "
-End if 
-
-If ($flags{$i} & Folder Item attribute modified)#0
-$events{$i}:=$events{$i}+"attribute modified, "
-End if 
-
-If ($flags{$i} & Folder Item info modified)#0
-$events{$i}:=$events{$i}+"info modified, "
-End if 
-
-If ($flags{$i} & Folder Item meta modified)#0
-$events{$i}:=$events{$i}+"meta modified, "
-End if 
-
-If ($flags{$i} & Folder Item owner changed)#0
-$events{$i}:=$events{$i}+"owner changed, "
-End if 
-
-If ($flags{$i} & Folder Item is file)#0
-$events{$i}:=$events{$i}+"file, "
-End if 
-
-If ($flags{$i} & Folder Item is directory)#0
-$events{$i}:=$events{$i}+"folder, "
-End if 
-
-If ($flags{$i} & Folder Item is symlink)#0
-$events{$i}:=$events{$i}+"symlink, "
-End if 
-
-$events{$i}:=Substring($events{$i};1;Length($events{$i})-2)
-
-End for 
 ```
-
 
 ###Examples
 
 ```
-FW GET WATCH PATHS ($folders)
-If (Size of array($folders)=0)
-$folder:=System folder(Desktop)
-Else 
-$folder:=$folders{1}
-End if 
-
-$folder:=Select folder("Where do you want to watch?";$folder;Use sheet window)
-
-If (OK=1)
-
-APPEND TO ARRAY($folders;$folder)
-$success:=FW Set watch paths ($folders)
+$success:=FW Set watch path (System folder(Desktop))
 $success:=FW Set watch method ("FOLDER_METHOD_CALLED_ON_EVENT")
-
-End if 
 ```
 
 In ``$2`` to ``FW Set watch paths`` or ``FW Set watch path``, you can pass an optional ``latency``, which is the number of seconds to wait before an event is sent. By default the latency is 1.0, the maximum is 60.0. A longer latency may contribute to better efficiency.
