@@ -23,12 +23,11 @@ Commands
 ---
 
 ```c
-// --- Settings
-FW_Set_watch_path
-FW_GET_WATCH_PATHS
-FW_Set_watch_method
-FW_Get_watch_method
-FW_Set_watch_paths
+FW_Set watch path
+FW_GET WATCH PATHS
+FW_Set watch method
+FW_Get watch method
+FW_Set watch paths
 ```
 
 Examples
