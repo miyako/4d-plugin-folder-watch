@@ -20,7 +20,6 @@ namespace FW2
     method_id_t CALLBACK_METHOD_ID = 0;
 				bool MONITOR_PROCESS_SHOULD_TERMINATE;
 				C_TEXT LISTENER_METHOD;
-				C_TEXT WATCH_PATH;
 				C_TEXT WATCH_METHOD;
 				NSTimeInterval MONITOR_LATENCY;
 				FSEventStreamRef MONITOR_STREAM;
@@ -28,6 +27,7 @@ namespace FW2
 				ARRAY_TEXT WATCH_PATHS_POSIX;
 				std::vector<CUTF16String>CALLBACK_EVENT_PATHS;
 				std::vector<NSTimeInterval>CALLBACK_EVENT_IDS;
+				std::vector<CUTF16String>CALLBACK_EVENT_FLAGS;
 }
 
 void generateUuid(C_TEXT &returnValue)
@@ -49,40 +49,54 @@ void gotEvent(FSEventStreamRef stream,
                  const FSEventStreamEventId eventIds[]
                  ) {
                  
-    NSArray *paths = (NSArray *)(CFArrayRef)eventPaths;         
-    NSMutableString *pathsString = [[NSMutableString alloc]init];
+	NSArray *paths = (NSArray *)(CFArrayRef)eventPaths;
+	NSMutableString *pathsString = [[NSMutableString alloc]init];
+	NSMutableArray *flags = [[NSMutableArray alloc]init];
+
+	for(uint32_t i = 0; i < [paths count] ; ++i)
+	{
+		if(i)
+		{
+			[pathsString appendString:@"\n"];
+		}
+		[flags addObject:[NSNumber numberWithInteger:eventFlags[i]]];
+		NSURL *u = (NSURL *)CFURLCreateWithFileSystemPath(kCFAllocatorDefault, (CFStringRef)[paths objectAtIndex:i], kCFURLPOSIXPathStyle, false);
+		if(u)
+		{
+			NSString *path = (NSString *)CFURLCopyFileSystemPath((CFURLRef)u, kCFURLHFSPathStyle);
+			[pathsString appendString:(NSString *)path];
+			[path release];
+		}
+	}
+	
+	NSString *flagsString = [flags componentsJoinedByString:@","];
+	[flags release];
+	
+	uint32_t len = [pathsString length];
+	uint32_t size = (len * sizeof(PA_Unichar)) + sizeof(PA_Unichar);
+	std::vector<uint8_t> buf(size);	
+	CUTF16String event_path;
+	
+	if([pathsString getCString:(char *)&buf[0] maxLength:size encoding:NSUnicodeStringEncoding])
+	{
+		event_path = CUTF16String((const PA_Unichar *)&buf[0], len);
+		len = [flagsString length];
+		size = (len * sizeof(PA_Unichar)) + sizeof(PA_Unichar);
+		buf.resize(size);
+		CUTF16String event_flag;
+		if([flagsString getCString:(char *)&buf[0] maxLength:size encoding:NSUnicodeStringEncoding])
+		{
+				event_flag = CUTF16String((const PA_Unichar *)&buf[0], len);
+				FW2::CALLBACK_EVENT_PATHS.push_back(event_path);
+				FW2::CALLBACK_EVENT_FLAGS.push_back(event_flag);
+				FW2::CALLBACK_EVENT_IDS.push_back([[NSDate date]timeIntervalSince1970]);
+		}
+	}
+	
+	[pathsString release];
     
-    for(uint32_t i = 0; i < [paths count] ; ++i)
-				{
-        if(i)
-								{
-            [pathsString appendString:@"\n"];    
-        }
-								NSURL *u = (NSURL *)CFURLCreateWithFileSystemPath(kCFAllocatorDefault, (CFStringRef)[paths objectAtIndex:i], kCFURLPOSIXPathStyle, false);
-								if(u)
-								{
-												NSString *path = (NSString *)CFURLCopyFileSystemPath((CFURLRef)u, kCFURLHFSPathStyle);
-												[pathsString appendString:(NSString *)path];
-												[path release];
-								}
-    }
-				
-				uint32_t len = [pathsString length];
-				uint32_t size = (len * sizeof(PA_Unichar)) + sizeof(PA_Unichar);
-				std::vector<uint8_t> buf(size);	
-				CUTF16String event_path;
-				
-				if([pathsString getCString:(char *)&buf[0] maxLength:size encoding:NSUnicodeStringEncoding])
-				{
-								event_path = CUTF16String((const PA_Unichar *)&buf[0], len);
-								FW2::CALLBACK_EVENT_PATHS.push_back(event_path);
-								FW2::CALLBACK_EVENT_IDS.push_back([[NSDate date]timeIntervalSince1970]);
-				}
-				
-    [pathsString release];
-    
-				if(event_path.size())
-								listenerLoopExecute();
+	if(event_path.size())
+		listenerLoopExecute();
 }
 
 #pragma mark -
@@ -151,7 +165,9 @@ void listenerLoopStart()
                                                          FW2::MONITOR_PROCESS_NAME);  
         
 #if VERSIONMAC  
-
+#ifndef kFSEventStreamCreateFlagFileEvents
+#define kFSEventStreamCreateFlagFileEvents 0x00000010
+#endif
         uint32_t i, length = FW2::WATCH_PATHS_POSIX.getSize();
         NSMutableArray *paths = [[NSMutableArray alloc]initWithCapacity:length];
         
@@ -170,11 +186,11 @@ void listenerLoopStart()
             (FSEventStreamCallback)gotEvent,
             &context,
             (CFArrayRef)paths,
-            kFSEventStreamEventIdSinceNow, 
+            kFSEventStreamEventIdSinceNow,
             (CFAbsoluteTime)latency,
             kFSEventStreamCreateFlagUseCFTypes 
-        //  | kFSEventStreamCreateFlagFileEvents 
-            | kFSEventStreamCreateFlagNoDefer 
+						| kFSEventStreamCreateFlagFileEvents
+            | kFSEventStreamCreateFlagNoDefer
             | kFSEventStreamCreateFlagIgnoreSelf
         );
           
@@ -206,12 +222,13 @@ void listenerLoopFinish()
         //set flags
         FW2::MONITOR_PROCESS_SHOULD_TERMINATE = true;
         PA_YieldAbsolute();
-								FW2::WATCH_PATHS.setSize(0);
-								FW2::WATCH_PATHS_POSIX.setSize(0);
-								FW2::CALLBACK_METHOD_ID = 0;
-								FW2::CALLBACK_EVENT_PATHS.clear();
-								FW2::CALLBACK_EVENT_IDS.clear();
-        //tell listener to die      
+				FW2::WATCH_PATHS.setSize(0);
+				FW2::WATCH_PATHS_POSIX.setSize(0);
+				FW2::CALLBACK_METHOD_ID = 0;
+				FW2::CALLBACK_EVENT_PATHS.clear();
+				FW2::CALLBACK_EVENT_FLAGS.clear();
+				FW2::CALLBACK_EVENT_IDS.clear();
+        //tell listener to die
         while(FW2::MONITOR_PROCESS_ID)
 								{
             PA_YieldAbsolute();
@@ -228,30 +245,40 @@ void listenerLoopExecute()
 
 void listenerLoopExecuteMethod()
 {
-				std::vector<CUTF16String>::iterator p = FW2::CALLBACK_EVENT_PATHS.begin();
-				std::vector<NSTimeInterval>::iterator e = FW2::CALLBACK_EVENT_IDS.begin();
-				double ts = *e;
-    CUTF16String event_path = *p;
-				
-    if(FW2::CALLBACK_METHOD_ID)
-				{
-        PA_Variable	params[2];
-        params[0] = PA_CreateVariable(eVK_Unistring);
-        PA_Unistring path = PA_CreateUnistring((PA_Unichar *)event_path.c_str());
-        PA_SetStringVariable(&params[0], &path);
-				PA_SetRealVariable(&params[1], ts);
-				params[1] = PA_CreateVariable(eVK_Real);
-				PA_SetRealVariable(&params[1], ts);
-				FW2::CALLBACK_EVENT_IDS.erase(e);
-				FW2::CALLBACK_EVENT_PATHS.erase(p);
-        PA_ExecuteMethodByID(FW2::CALLBACK_METHOD_ID, params, 2);
-        //PA_DisposeUnistring(&path);//removed 15.11.20 (clear will dispose string too)
-        PA_ClearVariable(&params[0]);//added 15.11.19
-				PA_ClearVariable(&params[1]);
-    }else{
-								FW2::CALLBACK_EVENT_IDS.erase(e);
-								FW2::CALLBACK_EVENT_PATHS.erase(p);
-				}
+	std::vector<CUTF16String>::iterator p = FW2::CALLBACK_EVENT_PATHS.begin();
+	std::vector<NSTimeInterval>::iterator e = FW2::CALLBACK_EVENT_IDS.begin();
+	std::vector<CUTF16String>::iterator f = FW2::CALLBACK_EVENT_FLAGS.begin();
+	double ts = *e;
+	CUTF16String event_path = *p;
+	CUTF16String event_flag = *f;
+
+	if(FW2::CALLBACK_METHOD_ID)
+	{
+		PA_Variable	params[3];
+		params[0] = PA_CreateVariable(eVK_Unistring);
+		params[1] = PA_CreateVariable(eVK_Real);
+		params[2] = PA_CreateVariable(eVK_Unistring);
+		PA_Unistring path = PA_CreateUnistring((PA_Unichar *)event_path.c_str());
+		PA_Unistring flag = PA_CreateUnistring((PA_Unichar *)event_flag.c_str());
+
+		PA_SetStringVariable(&params[0], &path);
+		PA_SetRealVariable(&params[1], ts);
+		PA_SetStringVariable(&params[2], &flag);
+		
+		FW2::CALLBACK_EVENT_IDS.erase(e);
+		FW2::CALLBACK_EVENT_PATHS.erase(p);
+		FW2::CALLBACK_EVENT_FLAGS.erase(f);
+		
+		PA_ExecuteMethodByID(FW2::CALLBACK_METHOD_ID, params, 3);
+		//PA_DisposeUnistring(&path);//removed 15.11.20 (clear will dispose string too)
+		PA_ClearVariable(&params[0]);//added 15.11.19
+		PA_ClearVariable(&params[1]);
+		PA_ClearVariable(&params[2]);
+	}else{
+		FW2::CALLBACK_EVENT_IDS.erase(e);
+		FW2::CALLBACK_EVENT_PATHS.erase(p);
+		FW2::CALLBACK_EVENT_FLAGS.erase(f);
+	}
 }
 
 #pragma mark -
@@ -318,18 +345,17 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 {
     C_TEXT Param1;
     C_LONGINT Param2;
-				C_LONGINT returnValue;
+		C_LONGINT returnValue;
 
-				Param1.fromParamAtIndex(pParams, 1);
+		Param1.fromParamAtIndex(pParams, 1);
     Param2.fromParamAtIndex(pParams, 2);
     
     if(!Param1.getUTF16Length())
-				{
-								//empty string passed
-        returnValue.setIntValue(1);
-								if(FW2::WATCH_METHOD.getUTF16Length())
-												PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
-								
+		{
+			//empty string passed
+			returnValue.setIntValue(1);
+			if(FW2::WATCH_PATHS.getSize())
+				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
     }else{
     
 #if VERSIONMAC    
@@ -352,8 +378,8 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
                     FW2::MONITOR_LATENCY = 60.0;
                 }
             
-																if(FW2::WATCH_METHOD.getUTF16Length())
-																				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
+								if(FW2::WATCH_PATHS.getSize())
+									PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
 												
                 FW2::WATCH_PATHS.setSize(0);
                 FW2::WATCH_PATHS.appendUTF16String(@"");
@@ -363,8 +389,8 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
                 FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
                 FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
 																
-																PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);//restart always
-																
+								PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);//restart always
+													
             }else{
                 returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
             }
@@ -452,8 +478,8 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 				{
 								//empty array passed
         returnValue.setIntValue(1);
-								if(FW2::WATCH_METHOD.getUTF16Length())
-												PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
+				if(FW2::WATCH_PATHS.getSize())
+					PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
 
     }else{
     
@@ -461,8 +487,8 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 
         uint32_t i, length = Param1.getSize();
         
-								if(FW2::WATCH_METHOD.getUTF16Length())
-												PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
+				if(FW2::WATCH_PATHS.getSize())
+					PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
 
         FW2::WATCH_PATHS.setSize(0);
         FW2::WATCH_PATHS_POSIX.setSize(0);
