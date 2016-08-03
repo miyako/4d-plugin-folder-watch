@@ -76,6 +76,8 @@ Folder Item is directory 131072
 Folder Item is symlink 262144
 ```
 
+**Note**: Trashing an item qualifies as a rename event, as it is not really removed at the system level.
+
 ###Example Callback
 
 ```
