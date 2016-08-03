@@ -470,7 +470,7 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 				if(Param1.getSize() == 1)
 				{
 								NSString *e1 = Param1.copyUTF16StringAtIndex(1);
-								isEmpty = isEmpty || [e1 length];
+								isEmpty = isEmpty || ![e1 length];
 								[e1 release];
 				}
 				
