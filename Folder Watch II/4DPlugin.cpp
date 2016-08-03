@@ -239,14 +239,15 @@ void listenerLoopExecuteMethod()
         params[0] = PA_CreateVariable(eVK_Unistring);
         PA_Unistring path = PA_CreateUnistring((PA_Unichar *)event_path.c_str());
         PA_SetStringVariable(&params[0], &path);
-								PA_SetRealVariable(&params[1], ts);
-								params[1] = PA_CreateVariable(eVK_Real);
-								FW2::CALLBACK_EVENT_IDS.erase(e);
-								FW2::CALLBACK_EVENT_PATHS.erase(p);
+				PA_SetRealVariable(&params[1], ts);
+				params[1] = PA_CreateVariable(eVK_Real);
+				PA_SetRealVariable(&params[1], ts);
+				FW2::CALLBACK_EVENT_IDS.erase(e);
+				FW2::CALLBACK_EVENT_PATHS.erase(p);
         PA_ExecuteMethodByID(FW2::CALLBACK_METHOD_ID, params, 2);
         //PA_DisposeUnistring(&path);//removed 15.11.20 (clear will dispose string too)
         PA_ClearVariable(&params[0]);//added 15.11.19
-								PA_ClearVariable(&params[1]);
+				PA_ClearVariable(&params[1]);
     }else{
 								FW2::CALLBACK_EVENT_IDS.erase(e);
 								FW2::CALLBACK_EVENT_PATHS.erase(p);
