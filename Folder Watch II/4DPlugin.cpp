@@ -229,11 +229,11 @@ void listenerLoopFinish()
 				FW2::CALLBACK_EVENT_FLAGS.clear();
 				FW2::CALLBACK_EVENT_IDS.clear();
         //tell listener to die
-        while(FW2::MONITOR_PROCESS_ID)
-								{
-            PA_YieldAbsolute();
+//        while(FW2::MONITOR_PROCESS_ID)
+//								{
+//            PA_YieldAbsolute();
             PA_UnfreezeProcess(FW2::MONITOR_PROCESS_ID);
-        }
+//        }
     }
 } 
 
