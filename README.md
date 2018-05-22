@@ -1,17 +1,25 @@
 # 4d-plugin-folder-watch-2
 Folder watch 4D plugin for Mac, 2nd edition.
 
-##Platform
+### Platform
 
 | carbon | cocoa | win32 | win64 |
 |:------:|:-----:|:---------:|:---------:|
-|🆗|🆗|🚫|🚫|
+|<img src="https://cloud.githubusercontent.com/assets/1725068/22371562/1b091f0a-e4db-11e6-8458-8653954a7cce.png" width="24" height="24" />|<img src="https://cloud.githubusercontent.com/assets/1725068/22371562/1b091f0a-e4db-11e6-8458-8653954a7cce.png" width="24" height="24" />|||
 
-##Features
+### Version
+
+<img src="https://cloud.githubusercontent.com/assets/1725068/18940649/21945000-8645-11e6-86ed-4a0f800e5a73.png" width="32" height="32" /> <img src="https://cloud.githubusercontent.com/assets/1725068/18940648/2192ddba-8645-11e6-864d-6d5692d55717.png" width="32" height="32" />
+
+### Releases 
+
+[2.0](https://github.com/miyako/4d-plugin-folder-watch-2/releases/tag/2.0)
+
+### Features
 
 Watch 1 or more folder paths on the local file system. Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath is also reported.
 
-###Remarks
+### Remarks
 
 Unlike [folder-watch](https://github.com/miyako/4d-plugin-folder-watch) which uses [Grand Central Dispatch (GCD)](https://developer.apple.com/library/ios/documentation/Performance/Reference/GCD_libdispatch_Ref/), this plugin uses [FSEvents](https://developer.apple.com/library/mac/documentation/Darwin/Reference/FSEvents_Ref/index.html#//apple_ref/doc/constant_group/FSEventStreamCreateFlags).
 
@@ -23,17 +31,7 @@ Here is a quick comparision of features:
 | Watch subfolders | × | ◎ |
 | OS X minimum version | 10.7 | 10.6 |
 
-###Commands
-
-```
-FW Set watch path
-FW GET WATCH PATHS
-FW Set watch method
-FW Get watch method
-FW Set watch paths
-```
-
-###Getting Started
+### Getting Started
 
 Register a folder path (text) to watch. ``FW Set watch path`` is a convenient shorthand for ``FW Set watch paths`` with 1 element. 
 
@@ -78,7 +76,7 @@ Folder Item is symlink 262144
 
 **Note**: Trashing an item qualifies as a rename event, as it is not really removed at the system level.
 
-###Example Callback
+### Example Callback
 
 ```
 C_TEXT($1)
@@ -104,7 +102,7 @@ While (Match regex(".+";$1;$i;$pos;$len))
 End while 
 ```
 
-###Examples
+### Examples
 
 ```
 $success:=FW Set watch path (System folder(Desktop))
