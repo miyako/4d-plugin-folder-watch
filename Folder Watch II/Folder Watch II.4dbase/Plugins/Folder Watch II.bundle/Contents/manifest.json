@@ -1,1 +1,0 @@
-﻿{"name":"Folder Watch II","id":20000,"commands":[{"theme":"Settings","syntax":"FW Set watch path(&T;&L):L"},{"theme":"Settings","syntax":"FW GET WATCH PATHS(&Y)"},{"theme":"Settings","syntax":"FW Set watch method(&T):L"},{"theme":"Settings","syntax":"FW Get watch method:T"},{"theme":"Settings","syntax":"FW Set watch paths(&Y;&L):L"}]}
