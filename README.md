@@ -1,4 +1,4 @@
-# 4d-plugin-folder-watch-2
+# 4d-plugin-folder-watch
 Folder watch 4D plugin for Mac and Windows
 
 ### Platform
