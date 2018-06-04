@@ -76,6 +76,8 @@ On Mac, trashing an item qualifies as a rename event, as it is not really remove
 
 On Windows, restoring an item from the trash or moving an item to/from a monitored folder generates create and modify events. **Moving an item across monitored folders may generate misleading events**.
 
+On Windows, only a subset of the flags are reported (created, removed, renamed, modified, is file, is directory).
+
 On both platforms, a rename event will fire twice; once for the old name and once more for the new name.
 
 ### Example Callback
