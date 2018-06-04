@@ -19,18 +19,6 @@ Folder watch 4D plugin for Mac, 2nd edition.
 
 Watch 1 or more folder paths on the local file system. Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath is also reported.
 
-### Remarks
-
-Unlike [folder-watch](https://github.com/miyako/4d-plugin-folder-watch) which uses [Grand Central Dispatch (GCD)](https://developer.apple.com/library/ios/documentation/Performance/Reference/GCD_libdispatch_Ref/), this plugin uses [FSEvents](https://developer.apple.com/library/mac/documentation/Darwin/Reference/FSEvents_Ref/index.html#//apple_ref/doc/constant_group/FSEventStreamCreateFlags).
-
-Here is a quick comparision of features:
-
-|  | folder-watch | folder-watch-2 |
-| :------------- | :-------------: | :-------------: |
-| Watch multiple paths | × | ◎ |
-| Watch subfolders | × | ◎ |
-| OS X minimum version | 10.7 | 10.6 |
-
 ### Getting Started
 
 Register a folder path (text) to watch. ``FW Set watch path`` is a convenient shorthand for ``FW Set watch paths`` with 1 element. 
