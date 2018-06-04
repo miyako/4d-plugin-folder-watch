@@ -70,7 +70,11 @@ Folder Item is directory 131072
 Folder Item is symlink 262144
 ```
 
-**Note**: Trashing an item qualifies as a rename event, as it is not really removed at the system level.
+#### Platform considerations
+
+On Mac, trashing an item qualifies as a rename event, as it is not really removed at the system level.
+
+On Windows, restoring an item from the trash or moving an item to/from a monitored folder generates create and modify events. **Moving an item across monitored folders may generate misleading events**.
 
 ### Example Callback
 
