@@ -1,5 +1,5 @@
-# 4d-plugin-folder-watch-2
-Folder watch 4D plugin for Mac and Windows, **3rd** edition.
+# 4d-plugin-folder-watch
+Folder watch 4D plugin for Mac and Windows
 
 ### Platform
 
@@ -9,11 +9,11 @@ Folder watch 4D plugin for Mac and Windows, **3rd** edition.
 
 ### Version
 
-<img src="https://cloud.githubusercontent.com/assets/1725068/18940649/21945000-8645-11e6-86ed-4a0f800e5a73.png" width="32" height="32" /> <img src="https://cloud.githubusercontent.com/assets/1725068/18940648/2192ddba-8645-11e6-864d-6d5692d55717.png" width="32" height="32" />
+<img src="https://cloud.githubusercontent.com/assets/1725068/18940649/21945000-8645-11e6-86ed-4a0f800e5a73.png" width="32" height="32" /> <img src="https://cloud.githubusercontent.com/assets/1725068/18940648/2192ddba-8645-11e6-864d-6d5692d55717.png" width="32" height="32" /> <img src="https://user-images.githubusercontent.com/1725068/41266195-ddf767b2-6e30-11e8-9d6b-2adf6a9f57a5.png" width="32" height="32" />
 
 ### Releases 
 
-[3.0](https://github.com/miyako/4d-plugin-folder-watch-2/releases/tag/3.0)
+[3.1](https://github.com/miyako/4d-plugin-folder-watch/releases/tag/3.1)
 
 ### Features
 
@@ -57,17 +57,17 @@ The flags indicate what exactly happend at the path.
 List of flags 
 
 ```c
-Folder Item created 256
-Folder Item removed 512
-Folder Item meta modified 1024
-Folder Item renamed 2048
-Folder Item modified 4096
-Folder Item info modified 8192
-Folder Item owner changed 16384
-Folder Item attribute modified 32768
-Folder Item is file 65536
-Folder Item is directory 131072
-Folder Item is symlink 262144
+Folder item created 256
+Folder item removed 512
+Folder item meta modified 1024
+Folder item renamed 2048
+Folder item modified 4096
+Folder item info modified 8192
+Folder item owner changed 16384
+Folder item attribute modified 32768
+Folder item is file 65536
+Folder item is directory 131072
+Folder item is symlink 262144
 ```
 
 #### Platform considerations
@@ -75,6 +75,10 @@ Folder Item is symlink 262144
 On Mac, trashing an item qualifies as a rename event, as it is not really removed at the system level.
 
 On Windows, restoring an item from the trash or moving an item to/from a monitored folder generates create and modify events. **Moving an item across monitored folders may generate misleading events**.
+
+On Windows, only a subset of the flags are reported (created, removed, renamed, modified, is file, is directory).
+
+On Windows, there is no way of knowing if the path was a file or folder, **when it is removed**.
 
 On both platforms, a rename event will fire twice; once for the old name and once more for the new name.
 
