@@ -57,17 +57,17 @@ The flags indicate what exactly happend at the path.
 List of flags 
 
 ```c
-Folder Item created 256
-Folder Item removed 512
-Folder Item meta modified 1024
-Folder Item renamed 2048
-Folder Item modified 4096
-Folder Item info modified 8192
-Folder Item owner changed 16384
-Folder Item attribute modified 32768
-Folder Item is file 65536
-Folder Item is directory 131072
-Folder Item is symlink 262144
+Folder item created 256
+Folder item removed 512
+Folder item meta modified 1024
+Folder item renamed 2048
+Folder item modified 4096
+Folder item info modified 8192
+Folder item owner changed 16384
+Folder item attribute modified 32768
+Folder item is file 65536
+Folder item is directory 131072
+Folder item is symlink 262144
 ```
 
 #### Platform considerations
@@ -77,6 +77,8 @@ On Mac, trashing an item qualifies as a rename event, as it is not really remove
 On Windows, restoring an item from the trash or moving an item to/from a monitored folder generates create and modify events. **Moving an item across monitored folders may generate misleading events**.
 
 On Windows, only a subset of the flags are reported (created, removed, renamed, modified, is file, is directory).
+
+On Windows, there is no way of knowing if the path was a file or folder, **when it is removed**.
 
 On both platforms, a rename event will fire twice; once for the old name and once more for the new name.
 
