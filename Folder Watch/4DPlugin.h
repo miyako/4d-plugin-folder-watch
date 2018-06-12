@@ -8,7 +8,12 @@
  #
  # --------------------------------------------------------------------------------*/
 
-
+#if VERSIONWIN
+#include <Shlwapi.h>
+#include <process.h>
+#define BUF_SIZE 32768 /* max=64KB */
+#endif
+#include <mutex>
 
 // --- Settings
 void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams);

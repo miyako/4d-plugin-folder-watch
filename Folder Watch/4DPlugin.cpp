@@ -11,12 +11,9 @@
 
 #include "4DPluginAPI.h"
 #include "4DPlugin.h"
-#if VERSIONWIN
-#include <Shlwapi.h>
-#include <process.h>
-#define BUF_SIZE 32768 /* max=64KB */
-#endif
-#include <mutex>
+
+#define CALLBACK_IN_NEW_PROCESS 0
+#define CALLBACK_SLEEP_TIME 59
 
 #if VERSIONMAC
 @interface Listener : NSObject
@@ -114,6 +111,8 @@ namespace FW2
 	Listener *listener = nil;
 	ARRAY_TEXT WATCH_PATHS_POSIX;
 #endif
+	
+	bool PROCESS_SHOULD_RESUME = false;
 }
 
 void generateUuid(C_TEXT &returnValue)
@@ -149,6 +148,38 @@ void generateUuid(C_TEXT &returnValue)
 }
 
 #if VERSIONMAC
+void listener_start()
+{
+	std::mutex m;
+	std::lock_guard<std::mutex> lock(m);
+	
+	if(!FW2::listener)
+	{
+		FW2::listener = [[Listener alloc]init];
+	}
+	
+	uint32_t i, length = FW2::WATCH_PATHS_POSIX.getSize();
+	NSMutableArray *paths = [[NSMutableArray alloc]initWithCapacity:length];
+	
+	for(i = 0; i < length; ++i){
+		NSString *path = FW2::WATCH_PATHS_POSIX.copyUTF16StringAtIndex(i);
+		if([path length]){
+			[paths addObject:path];
+		}
+		[path release];
+	}
+	/* must do this in main process */
+	[FW2::listener setPaths:paths latency:FW2::MONITOR_LATENCY];
+	[paths release];
+}
+
+void listener_end()
+{
+	/* must do this in main process */
+	[FW2::listener release];
+	FW2::listener = nil;
+}
+
 void gotEvent(FSEventStreamRef stream,
 							void *callbackInfo,
 							size_t numEvents,
@@ -173,6 +204,9 @@ void gotEvent(FSEventStreamRef stream,
 			if([path getCString:(char *)&buf[0] maxLength:size encoding:NSUnicodeStringEncoding])
 			{
 				CUTF16String event_path = CUTF16String((const PA_Unichar *)&buf[0], len);
+				if(eventFlags[i] & kFSEventStreamEventFlagItemIsDir)
+					event_path += (const PA_Unichar *)":\0\0\0";
+				
 				FW2::CALLBACK_EVENT_PATHS.push_back(event_path);
 				FW2::CALLBACK_EVENT_FLAGS.push_back(eventFlags[i]);
 				FW2::CALLBACK_EVENT_IDS.push_back([[NSDate date]timeIntervalSince1970]);
@@ -209,11 +243,7 @@ void OnCloseProcess()
 {
 	if(IsProcessOnExit())
 	{
-#if VERSIONMAC
-		PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
-#else
 		listenerLoopFinish();
-#endif
 	}
 }
 
@@ -246,7 +276,7 @@ unsigned __stdcall doIt(void *p)
 			| FILE_NOTIFY_CHANGE_SIZE
 			/* | FILE_NOTIFY_CHANGE_SECURITY */
 			| FILE_NOTIFY_CHANGE_CREATION
-			/* | FILE_NOTIFY_CHANGE_ATTRIBUTES*/
+			/* | FILE_NOTIFY_CHANGE_ATTRIBUTES */
 			| FILE_NOTIFY_CHANGE_LAST_WRITE
 			| FILE_NOTIFY_CHANGE_LAST_ACCESS;
 
@@ -334,7 +364,7 @@ void listenerLoop()
 	std::vector<CUTF16String>watch_path_handle_paths;
 	std::vector<HANDLE>watch_path_handles;
 
-	if (TRUE)
+	if (1)
 	{
 		std::mutex m;
 		std::lock_guard<std::mutex> lock(m);
@@ -435,7 +465,7 @@ void listenerLoop()
 			{
 				case WAIT_TIMEOUT:
 					PA_YieldAbsolute();
-					PA_PutProcessToSleep(PA_GetCurrentProcessNumber(), 59);//59 ticks
+					PA_PutProcessToSleep(PA_GetCurrentProcessNumber(), CALLBACK_SLEEP_TIME);//59 ticks
 					break;
 				case WAIT_FAILED:
 					exit = TRUE;
@@ -541,15 +571,20 @@ void listenerLoop()
 											}
 											if (event_flag)
 											{
-												if (PathIsDirectory((LPCTSTR)path.c_str()))
+												if (!(event_flag & FILE_ACTION_REMOVED))
 												{
-													event_flag |= 131072;
+													if (PathIsDirectory((LPCTSTR)event_path.c_str()))
+													{
+														if (event_path.at(event_path.size() - 1) != L'\\')
+															event_path += L'\\';
+														event_flag |= 131072;
+													}
+													else
+													{
+														event_flag |= 65536;
+													}
 												}
-												else
-												{
-													event_flag |= 65536;
-												}
-												
+
 												if (TRUE)
 												{
 													std::mutex m;
@@ -629,34 +664,47 @@ void listenerLoop()
 #endif
 
 #if VERSIONMAC
-	while (!FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+	while(!PA_IsProcessDying())
 	{
 		PA_YieldAbsolute();
 
-		while (FW2::CALLBACK_EVENT_IDS.size())
+		std::mutex m;
+		std::lock_guard<std::mutex> lock(m);
+		
+		if(FW2::PROCESS_SHOULD_RESUME)
 		{
-			PA_YieldAbsolute();
-
-			listenerLoopExecuteMethod();
-
-			/*
-			C_TEXT processName;
-			generateUuid(processName);
-			PA_NewProcess((void *)listenerLoopExecuteMethod,
-			FW2::MONITOR_PROCESS_STACK_SIZE,
-			(PA_Unichar *)processName.getUTF16StringPtr());
-			*/
-
-			if (FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
-				break;
-		}
-		if (!FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+			while (FW2::CALLBACK_EVENT_IDS.size())
+			{
+				PA_YieldAbsolute();
+				
+				if(CALLBACK_IN_NEW_PROCESS)
+				{
+					C_TEXT processName;
+					generateUuid(processName);
+					PA_NewProcess((void *)listenerLoopExecuteMethod,
+												FW2::MONITOR_PROCESS_STACK_SIZE,
+												(PA_Unichar *)processName.getUTF16StringPtr());
+				}else
+				{
+					listenerLoopExecuteMethod();
+				}
+				
+				if (FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+					break;
+			}
+			
+			FW2::PROCESS_SHOULD_RESUME = false;
+			
+		}else
 		{
-			PA_FreezeProcess(PA_GetCurrentProcessNumber());
+			PA_PutProcessToSleep(PA_GetCurrentProcessNumber(), CALLBACK_SLEEP_TIME);
 		}
+		
+		if(FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+			break;
 	}
 	
-	[FW2::listener release];
+	PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listener_end, NULL);
 	
 #endif
 	
@@ -682,46 +730,19 @@ void listenerLoopStart()
 	std::mutex m;
 	std::lock_guard<std::mutex> lock(m);
 
-#if VERSIONMAC
-	if(!FW2::MONITOR_PROCESS_ID)
-	{
-		FW2::listener = [[Listener alloc]init];
-	}
-
-	uint32_t i, length = FW2::WATCH_PATHS_POSIX.getSize();
-	NSMutableArray *paths = [[NSMutableArray alloc]initWithCapacity:length];
-	
-	for(i = 0; i < length; ++i){
-		NSString *path = FW2::WATCH_PATHS_POSIX.copyUTF16StringAtIndex(i);
-		if([path length]){
-			[paths addObject:path];
-		}
-		[path release];
-	}
-	
-	[FW2::listener setPaths:paths latency:FW2::MONITOR_LATENCY];
-	[paths release];
-
+	/* since v17 it is not allowed to call PA_NewProcess() in main process */
 	if (!FW2::MONITOR_PROCESS_ID)
 	{
 		FW2::MONITOR_PROCESS_ID = PA_NewProcess((void *)listenerLoop,
-			FW2::MONITOR_PROCESS_STACK_SIZE,
-			FW2::MONITOR_PROCESS_NAME);
+																						FW2::MONITOR_PROCESS_STACK_SIZE,
+																						FW2::MONITOR_PROCESS_NAME);
 	}
-
-#else
-	if (!FW2::MONITOR_PROCESS_ID)
-	{
-		FW2::MONITOR_PROCESS_ID = PA_NewProcess((void *)listenerLoop,
-			FW2::MONITOR_PROCESS_STACK_SIZE,
-			FW2::MONITOR_PROCESS_NAME);
-	}
+#if VERSIONWIN
 	else
 	{
 		listenerLoopFinish();
 	}
 #endif
-
 }
 
 void listenerLoopFinish()
@@ -732,8 +753,10 @@ void listenerLoopFinish()
 	if(FW2::MONITOR_PROCESS_ID)
 	{
 		FW2::MONITOR_PROCESS_SHOULD_TERMINATE = true;
-		PA_YieldAbsolute();		
-		PA_UnfreezeProcess(FW2::MONITOR_PROCESS_ID);
+		
+		PA_YieldAbsolute();
+		
+		FW2::PROCESS_SHOULD_RESUME = true;
 	}
 }
 
@@ -743,7 +766,7 @@ void listenerLoopExecute()
 	std::lock_guard<std::mutex> lock(m);
 	
 	FW2::MONITOR_PROCESS_SHOULD_TERMINATE = false;
-	PA_UnfreezeProcess(FW2::MONITOR_PROCESS_ID);
+	FW2::PROCESS_SHOULD_RESUME = true;
 }
 
 void listenerLoopExecuteMethod()
@@ -896,11 +919,7 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 			
 			if(FW2::MONITOR_PROCESS_ID)
 			{
-#if VERSIONMAC
-				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
-#else
 				listenerLoopFinish();
-#endif
 			}
 			
 		}else
@@ -929,6 +948,9 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 			{
 				if(PathIsDirectory((LPCTSTR)path.c_str()))
 				{
+					if(path.at(path.size() - 1) != L'\\')
+						path += L'\\';
+					
 					returnValue.setIntValue(1);
 				}else
 				{
@@ -956,12 +978,14 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 				FW2::WATCH_PATHS_POSIX.setSize(0);
 				FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
 				FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
-				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);
 #else
 				FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)"\0\0", 0);
 				FW2::WATCH_PATHS.appendUTF16String(&path);
-				listenerLoopStart();
 #endif
+#if VERSIONMAC
+				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listener_start, NULL);
+#endif
+				listenerLoopStart();
 			}
 			
 #if VERSIONMAC
@@ -1038,11 +1062,7 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 			returnValue.setIntValue(1);
 			if(FW2::MONITOR_PROCESS_ID)
 			{
-#if VERSIONMAC
-				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopFinish, NULL);
-#else
 				listenerLoopFinish();
-#endif
 			}
 			
 		}else{
@@ -1087,6 +1107,9 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 				{
 					if(PathIsDirectory((LPCTSTR)path.c_str()))
 					{
+						if(path.at(path.size() - 1) != L'\\')
+							path += L'\\';
+						
 						FW2::WATCH_PATHS.appendUTF16String(&path);
 					}else
 					{
@@ -1113,10 +1136,9 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 					FW2::MONITOR_LATENCY = 60.0;
 				}
 #if VERSIONMAC
-				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listenerLoopStart, NULL);
-#else
-				listenerLoopStart();
+				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listener_start, NULL);
 #endif
+			listenerLoopStart();
 			}
 
 		}
