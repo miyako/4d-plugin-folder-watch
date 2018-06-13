@@ -15,6 +15,16 @@ Folder watch 4D plugin for Mac and Windows
 
 [3.1](https://github.com/miyako/4d-plugin-folder-watch/releases/tag/3.1)
 
+![preemption xx](https://user-images.githubusercontent.com/1725068/41327179-4e839948-6efd-11e8-982b-a670d511e04f.png)
+
+except 
+
+* ``FW Set watch path``
+
+* ``FW Set watch paths``
+
+* ``FW GET WATCH PATHS``
+
 ### Features
 
 Watch 1 or more folder paths on the local file system. Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath are also reported.
