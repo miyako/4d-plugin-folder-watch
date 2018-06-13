@@ -19,9 +19,9 @@ Folder watch 4D plugin for Mac and Windows
 
 except 
 
-* ``FW Set watch path`` (``PA_NewProcess``)
+* ``FW Set watch path``
 
-* ``FW Set watch paths`` (``PA_NewProcess``)
+* ``FW Set watch paths``
 
 ### Features
 
