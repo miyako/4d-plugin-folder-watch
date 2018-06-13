@@ -23,6 +23,8 @@ except
 
 * ``FW Set watch paths``
 
+* ``FW GET WATCH PATHS``
+
 ### Features
 
 Watch 1 or more folder paths on the local file system. Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath are also reported.
