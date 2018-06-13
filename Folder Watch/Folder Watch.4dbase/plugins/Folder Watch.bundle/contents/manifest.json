@@ -10,7 +10,7 @@
 							 {
 							 "theme": "Settings",
 							 "syntax": "FW GET WATCH PATHS(&Y)",
-							 "threadSafe": true
+							 "threadSafe": false
 							 },
 							 {
 							 "theme": "Settings",
