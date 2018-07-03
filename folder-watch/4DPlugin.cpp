@@ -671,7 +671,7 @@ void listenerLoop()
 	{
 		PA_YieldAbsolute();
 
-		std::lock_guard<std::mutex> lock(globalMutex);
+//		std::lock_guard<std::mutex> lock(globalMutex);
 		
 		if(FW2::PROCESS_SHOULD_RESUME)
 		{
@@ -729,7 +729,7 @@ void listenerLoop()
 
 void listenerLoopStart()
 {
-	std::lock_guard<std::mutex> lock(globalMutex);
+//	std::lock_guard<std::mutex> lock(globalMutex);
 
 	/* since v17 it is not allowed to call PA_NewProcess() in main process */
 	if (!FW2::MONITOR_PROCESS_ID)
@@ -904,8 +904,6 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 	
 	if(!IsProcessOnExit())
 	{
-		std::lock_guard<std::mutex> lock(globalMutex);
-		
 		Param1.fromParamAtIndex(pParams, 1);
 		Param2.fromParamAtIndex(pParams, 2);
 		
@@ -960,25 +958,32 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 #endif
 			if(returnValue.getIntValue() == 1)
 			{
-				FW2::MONITOR_LATENCY = Param2.getIntValue();
-				if(FW2::MONITOR_LATENCY < 1){
-					FW2::MONITOR_LATENCY = 1.0;
-				}
-				if(FW2::MONITOR_LATENCY > 60){
-					FW2::MONITOR_LATENCY = 60.0;
+				
+				if(1)
+				{
+						std::lock_guard<std::mutex> lock(globalMutex);
+					
+						FW2::MONITOR_LATENCY = Param2.getIntValue();
+						if(FW2::MONITOR_LATENCY < 1){
+							FW2::MONITOR_LATENCY = 1.0;
+						}
+						if(FW2::MONITOR_LATENCY > 60){
+							FW2::MONITOR_LATENCY = 60.0;
+						}
+					
+					FW2::WATCH_PATHS.setSize(0);
+#if VERSIONMAC
+					FW2::WATCH_PATHS.appendUTF16String(@"");
+					FW2::WATCH_PATHS.appendUTF16String(pathHFS);
+					FW2::WATCH_PATHS_POSIX.setSize(0);
+					FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
+					FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
+#else
+					FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)"\0\0", 0);
+					FW2::WATCH_PATHS.appendUTF16String(&path);
+#endif
 				}
 				
-				FW2::WATCH_PATHS.setSize(0);
-#if VERSIONMAC
-				FW2::WATCH_PATHS.appendUTF16String(@"");
-				FW2::WATCH_PATHS.appendUTF16String(pathHFS);
-				FW2::WATCH_PATHS_POSIX.setSize(0);
-				FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
-				FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
-#else
-				FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)"\0\0", 0);
-				FW2::WATCH_PATHS.appendUTF16String(&path);
-#endif
 #if VERSIONMAC
 				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listener_start, NULL);
 #endif
@@ -1024,8 +1029,6 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 	
 	if(!IsProcessOnExit())
 	{
-		std::lock_guard<std::mutex> lock(globalMutex);
-
 		Param1.fromParamAtIndex(pParams, 1);
 		Param2.fromParamAtIndex(pParams, 2);
 		
@@ -1051,72 +1054,88 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 			
 			uint32_t i, length = Param1.getSize();
 	
-			FW2::WATCH_PATHS.setSize(0);
-#if VERSIONMAC
-			FW2::WATCH_PATHS.appendUTF16String(@"");
-			FW2::WATCH_PATHS_POSIX.setSize(0);
-			FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
-#else
-			FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)"\0\0", 0);
-#endif
-
-			for(i = 0; i < length; ++i)
+			if(1)
 			{
+				std::lock_guard<std::mutex> lock(globalMutex);
+				
+				FW2::WATCH_PATHS.setSize(0);
 #if VERSIONMAC
-				BOOL isDirectory = false;
-				NSString *path = Param1.copyPathAtIndex(i);
-				NSString *pathHFS = Param1.copyUTF16StringAtIndex(i);
-				if([[NSFileManager defaultManager]fileExistsAtPath:path isDirectory:&isDirectory]){
-					
-					if(isDirectory)
-					{
-						FW2::WATCH_PATHS.appendUTF16String(pathHFS);
-						FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
-					}else
-					{
-						returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
-					}
-				}else
-				{
-					returnValue.setIntValue(MONITOR_FOLDER_INVALID_PATH_ERROR);
-				}
-				[pathHFS release];
-				[path release];
+				FW2::WATCH_PATHS.appendUTF16String(@"");
+				FW2::WATCH_PATHS_POSIX.setSize(0);
+				FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
 #else
-				CUTF16String path;
-				Param1.copyUTF16StringAtIndex(&path, i);
-				if(PathFileExists((LPCTSTR)path.c_str()))
-				{
-					if(PathIsDirectory((LPCTSTR)path.c_str()))
-					{
-						if(path.at(path.size() - 1) != L'\\')
-							path += L'\\';
-						
-						FW2::WATCH_PATHS.appendUTF16String(&path);
-					}else
-					{
-						returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
-					}
-				}else
-				{
-					returnValue.setIntValue(MONITOR_FOLDER_INVALID_PATH_ERROR);
-				}
+				FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)"\0\0", 0);
 #endif
 			}
-
+			
+			if(1)
+			{
+				std::lock_guard<std::mutex> lock(globalMutex);
+				
+				for(i = 0; i < length; ++i)
+				{
+#if VERSIONMAC
+					BOOL isDirectory = false;
+					NSString *path = Param1.copyPathAtIndex(i);
+					NSString *pathHFS = Param1.copyUTF16StringAtIndex(i);
+					if([[NSFileManager defaultManager]fileExistsAtPath:path isDirectory:&isDirectory]){
+						
+						if(isDirectory)
+						{
+							FW2::WATCH_PATHS.appendUTF16String(pathHFS);
+							FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
+						}else
+						{
+							returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
+						}
+					}else
+					{
+						returnValue.setIntValue(MONITOR_FOLDER_INVALID_PATH_ERROR);
+					}
+					[pathHFS release];
+					[path release];
+#else
+					CUTF16String path;
+					Param1.copyUTF16StringAtIndex(&path, i);
+					if(PathFileExists((LPCTSTR)path.c_str()))
+					{
+						if(PathIsDirectory((LPCTSTR)path.c_str()))
+						{
+							if(path.at(path.size() - 1) != L'\\')
+								path += L'\\';
+							
+							FW2::WATCH_PATHS.appendUTF16String(&path);
+						}else
+						{
+							returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
+						}
+					}else
+					{
+						returnValue.setIntValue(MONITOR_FOLDER_INVALID_PATH_ERROR);
+					}
+#endif
+				}
+			}
+			
 			if(FW2::WATCH_PATHS.getSize() > 1)
 			{
-				returnValue.setIntValue(1);
+				if(1)
+				{
+					std::lock_guard<std::mutex> lock(globalMutex);
+					
+					returnValue.setIntValue(1);
+					
+					FW2::MONITOR_LATENCY = Param2.getIntValue();
+					if(FW2::MONITOR_LATENCY < 1)
+					{
+						FW2::MONITOR_LATENCY = 1.0;
+					}
+					if(FW2::MONITOR_LATENCY > 60)
+					{
+						FW2::MONITOR_LATENCY = 60.0;
+					}
+				}
 				
-				FW2::MONITOR_LATENCY = Param2.getIntValue();
-				if(FW2::MONITOR_LATENCY < 1)
-				{
-					FW2::MONITOR_LATENCY = 1.0;
-				}
-				if(FW2::MONITOR_LATENCY > 60)
-				{
-					FW2::MONITOR_LATENCY = 60.0;
-				}
 #if VERSIONMAC
 				PA_RunInMainProcess((PA_RunInMainProcessProcPtr)listener_start, NULL);
 #endif
