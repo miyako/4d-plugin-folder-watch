@@ -15,6 +15,8 @@
 #define CALLBACK_IN_NEW_PROCESS 0
 #define CALLBACK_SLEEP_TIME 59
 
+std::mutex globalMutex;
+
 #if VERSIONMAC
 @interface Listener : NSObject
 
@@ -150,8 +152,7 @@ void generateUuid(C_TEXT &returnValue)
 #if VERSIONMAC
 void listener_start()
 {
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 	
 	if(!FW2::listener)
 	{
@@ -207,8 +208,7 @@ void gotEvent(FSEventStreamRef stream,
 				if(eventFlags[i] & kFSEventStreamEventFlagItemIsDir)
 					event_path += (const PA_Unichar *)":\0\0\0";
 				
-				std::mutex m;
-				std::lock_guard<std::mutex> lock(m);
+				std::lock_guard<std::mutex> lock(globalMutex);
 				
 				FW2::CALLBACK_EVENT_PATHS.push_back(event_path);
 				FW2::CALLBACK_EVENT_FLAGS.push_back(eventFlags[i]);
@@ -369,8 +369,7 @@ void listenerLoop()
 
 	if (1)
 	{
-		std::mutex m;
-		std::lock_guard<std::mutex> lock(m);
+		std::lock_guard<std::mutex> lock(globalMutex);
 		
 		FW2::MONITOR_PROCESS_SHOULD_TERMINATE = false;
 		for (int i = 0; i < FW2::WATCH_PATHS.getSize(); ++i)
@@ -588,9 +587,10 @@ void listenerLoop()
 													}
 												}
 
-												if (TRUE)
+												if (1)
 												{
-													std::mutex m;
+													std::lock_guard<std::mutex> lock(globalMutex);
+													
 													FW2::CALLBACK_EVENT_IDS.push_back(ts);
 													FW2::CALLBACK_EVENT_PATHS.push_back(event_path);
 													FW2::CALLBACK_EVENT_FLAGS.push_back(event_flag);
@@ -671,8 +671,7 @@ void listenerLoop()
 	{
 		PA_YieldAbsolute();
 
-		std::mutex m;
-		std::lock_guard<std::mutex> lock(m);
+		std::lock_guard<std::mutex> lock(globalMutex);
 		
 		if(FW2::PROCESS_SHOULD_RESUME)
 		{
@@ -713,8 +712,8 @@ void listenerLoop()
 	
 	if(1)
 	{
-		std::mutex m;
-		std::lock_guard<std::mutex> lock(m);
+		std::lock_guard<std::mutex> lock(globalMutex);
+		
 		FW2::WATCH_PATHS.setSize(0);
 #if VERSIONMAC
 		FW2::WATCH_PATHS_POSIX.setSize(0);
@@ -730,8 +729,7 @@ void listenerLoop()
 
 void listenerLoopStart()
 {
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 
 	/* since v17 it is not allowed to call PA_NewProcess() in main process */
 	if (!FW2::MONITOR_PROCESS_ID)
@@ -750,8 +748,7 @@ void listenerLoopStart()
 
 void listenerLoopFinish()
 {
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 	
 	if(FW2::MONITOR_PROCESS_ID)
 	{
@@ -765,8 +762,7 @@ void listenerLoopFinish()
 
 void listenerLoopExecute()
 {
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 	
 	FW2::MONITOR_PROCESS_SHOULD_TERMINATE = false;
 	FW2::PROCESS_SHOULD_RESUME = true;
@@ -774,8 +770,7 @@ void listenerLoopExecute()
 
 void listenerLoopExecuteMethod()
 {
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 	
 	std::vector<CUTF16String>::iterator p = FW2::CALLBACK_EVENT_PATHS.begin();
 #if VERSIONMAC
@@ -909,8 +904,7 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 	
 	if(!IsProcessOnExit())
 	{
-		std::mutex m;
-		std::lock_guard<std::mutex> lock(m);
+		std::lock_guard<std::mutex> lock(globalMutex);
 		
 		Param1.fromParamAtIndex(pParams, 1);
 		Param2.fromParamAtIndex(pParams, 2);
@@ -1009,8 +1003,7 @@ void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
 	
 	Param1.fromParamAtIndex(pParams, 1);
 	
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 	
 	if(!Param1.getUTF16Length())
 	{
@@ -1031,8 +1024,7 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 	
 	if(!IsProcessOnExit())
 	{
-		std::mutex m;
-		std::lock_guard<std::mutex> lock(m);
+		std::lock_guard<std::mutex> lock(globalMutex);
 
 		Param1.fromParamAtIndex(pParams, 1);
 		Param2.fromParamAtIndex(pParams, 2);
@@ -1140,16 +1132,14 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 
 void FW_GET_WATCH_PATHS(sLONG_PTR *pResult, PackagePtr pParams)
 {
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 	
 	FW2::WATCH_PATHS.toParamAtIndex(pParams, 1);
 }
 
 void FW_Get_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
 {
-	std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
+	std::lock_guard<std::mutex> lock(globalMutex);
 	
 	FW2::WATCH_METHOD.setReturn(pResult);
 }
