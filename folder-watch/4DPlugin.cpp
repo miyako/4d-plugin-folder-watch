@@ -16,6 +16,8 @@
 #define CALLBACK_SLEEP_TIME 59
 
 std::mutex globalMutex;
+std::mutex globalMutex0;
+std::mutex globalMutex2;
 
 #if VERSIONMAC
 @interface Listener : NSObject
@@ -671,7 +673,7 @@ void listenerLoop()
 	{
 		PA_YieldAbsolute();
 
-//		std::lock_guard<std::mutex> lock(globalMutex);
+		std::lock_guard<std::mutex> lock(globalMutex2);
 		
 		if(FW2::PROCESS_SHOULD_RESUME)
 		{
@@ -729,9 +731,8 @@ void listenerLoop()
 
 void listenerLoopStart()
 {
-//	std::lock_guard<std::mutex> lock(globalMutex);
-
-	/* since v17 it is not allowed to call PA_NewProcess() in main process */
+	std::lock_guard<std::mutex> lock(globalMutex0);
+	
 	if (!FW2::MONITOR_PROCESS_ID)
 	{
 		FW2::MONITOR_PROCESS_ID = PA_NewProcess((void *)listenerLoop,

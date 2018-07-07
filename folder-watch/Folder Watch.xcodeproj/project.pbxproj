@@ -444,7 +444,7 @@
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = com.4D.4DPlugin.miyako.FolderWatch;
+				PRODUCT_BUNDLE_IDENTIFIER = com.4D.4DPlugin.FolderWatch;
 				PRODUCT_NAME = "Folder Watch";
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = (
@@ -484,7 +484,7 @@
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = com.4D.4DPlugin.miyako.FolderWatch;
+				PRODUCT_BUNDLE_IDENTIFIER = com.4D.4DPlugin.FolderWatch;
 				PRODUCT_NAME = "Folder Watch";
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = (
@@ -522,7 +522,7 @@
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = com.4D.4DPlugin.miyako.FolderWatch;
+				PRODUCT_BUNDLE_IDENTIFIER = com.4D.4DPlugin.FolderWatch;
 				PRODUCT_NAME = "Folder Watch";
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = (
