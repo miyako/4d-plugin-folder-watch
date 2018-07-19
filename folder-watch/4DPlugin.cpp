@@ -102,7 +102,7 @@ namespace FW2
 	process_name_t MONITOR_PROCESS_NAME = (PA_Unichar *)"$\0F\0O\0L\0D\0E\0R\0_\0W\0A\0T\0C\0H\0\0\0";
 	process_number_t MONITOR_PROCESS_ID = 0;
 	process_stack_size_t MONITOR_PROCESS_STACK_SIZE = 0;
-	bool MONITOR_PROCESS_SHOULD_TERMINATE;
+	bool PROCESS_SHOULD_TERMINATE;
 	C_TEXT WATCH_METHOD;
 	
 	ARRAY_TEXT WATCH_PATHS;
@@ -350,7 +350,7 @@ unsigned __stdcall doIt(void *p)
 				}
 			}
 			
-			if (FW2::MONITOR_PROCESS_SHOULD_TERMINATE || bytesReturned == 0) exit = TRUE;
+			if (FW2::PROCESS_SHOULD_TERMINATE || bytesReturned == 0) exit = TRUE;
 			
 		} while (!exit);
 
@@ -373,7 +373,7 @@ void listenerLoop()
 	{
 		std::lock_guard<std::mutex> lock(globalMutex);
 		
-		FW2::MONITOR_PROCESS_SHOULD_TERMINATE = false;
+		FW2::PROCESS_SHOULD_TERMINATE = false;
 		for (int i = 0; i < FW2::WATCH_PATHS.getSize(); ++i)
 		{
 			CUTF16String path;
@@ -632,7 +632,7 @@ void listenerLoop()
 					break;
 			}
 			
-			if (FW2::MONITOR_PROCESS_SHOULD_TERMINATE) exit = TRUE;
+			if (FW2::PROCESS_SHOULD_TERMINATE) exit = TRUE;
 			
 		} while (!exit);
 		
@@ -672,12 +672,28 @@ void listenerLoop()
 	while(!PA_IsProcessDying())
 	{
 		PA_YieldAbsolute();
-
-		std::lock_guard<std::mutex> lock(globalMutex2);
+        
+        bool PROCESS_SHOULD_RESUME;
+        bool PROCESS_SHOULD_TERMINATE;
+        
+        if(1)
+        {
+            std::lock_guard<std::mutex> lock(globalMutex);
+            PROCESS_SHOULD_RESUME = FW2::PROCESS_SHOULD_RESUME;
+            PROCESS_SHOULD_TERMINATE = FW2::PROCESS_SHOULD_TERMINATE;
+        }
 		
-		if(FW2::PROCESS_SHOULD_RESUME)
+		if(PROCESS_SHOULD_RESUME)
 		{
-			while (FW2::CALLBACK_EVENT_IDS.size())
+            size_t EVENT_IDS;
+            
+            if(1)
+            {
+                std::lock_guard<std::mutex> lock(globalMutex);
+                EVENT_IDS = FW2::CALLBACK_EVENT_IDS.size();
+            }
+            
+			while (EVENT_IDS)
 			{
 				PA_YieldAbsolute();
 				
@@ -693,18 +709,29 @@ void listenerLoop()
 					listenerLoopExecuteMethod();
 				}
 				
-				if (FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+				if (PROCESS_SHOULD_TERMINATE)
 					break;
+                
+                if(1)
+                {
+                    std::lock_guard<std::mutex> lock(globalMutex);
+                    EVENT_IDS = FW2::CALLBACK_EVENT_IDS.size();
+                    PROCESS_SHOULD_TERMINATE = FW2::PROCESS_SHOULD_TERMINATE;
+                }
 			}
 			
-			FW2::PROCESS_SHOULD_RESUME = false;
+            if(1)
+            {
+                std::lock_guard<std::mutex> lock(globalMutex);
+                FW2::PROCESS_SHOULD_RESUME = false;
+            }
 			
 		}else
 		{
 			PA_PutProcessToSleep(PA_GetCurrentProcessNumber(), CALLBACK_SLEEP_TIME);
 		}
 		
-		if(FW2::MONITOR_PROCESS_SHOULD_TERMINATE)
+		if(PROCESS_SHOULD_TERMINATE)
 			break;
 	}
 	
@@ -753,7 +780,7 @@ void listenerLoopFinish()
 	
 	if(FW2::MONITOR_PROCESS_ID)
 	{
-		FW2::MONITOR_PROCESS_SHOULD_TERMINATE = true;
+		FW2::PROCESS_SHOULD_TERMINATE = true;
 		
 		PA_YieldAbsolute();
 		
@@ -765,7 +792,7 @@ void listenerLoopExecute()
 {
 	std::lock_guard<std::mutex> lock(globalMutex);
 	
-	FW2::MONITOR_PROCESS_SHOULD_TERMINATE = false;
+	FW2::PROCESS_SHOULD_TERMINATE = false;
 	FW2::PROCESS_SHOULD_RESUME = true;
 }
 
