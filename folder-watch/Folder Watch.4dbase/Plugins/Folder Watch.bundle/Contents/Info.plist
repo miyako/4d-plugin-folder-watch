@@ -9,7 +9,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Folder Watch</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.4D.4DPlugin.FolderWatch</string>
+	<string>com.4D.FolderWatch</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
@@ -21,7 +21,7 @@
 		<string>MacOSX</string>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>3.6</string>
+	<string>3.7</string>
 	<key>CSResourcesFileMapped</key>
 	<true/>
 	<key>DTCompiler</key>
