@@ -13,7 +13,7 @@ Folder watch 4D plugin for Mac and Windows
 
 ### Releases 
 
-[3.6](https://github.com/miyako/4d-plugin-folder-watch/releases/tag/3.6)
+[3.7](https://github.com/miyako/4d-plugin-folder-watch/releases/tag/3.7)
 
 ![preemption xx](https://user-images.githubusercontent.com/1725068/41327179-4e839948-6efd-11e8-982b-a670d511e04f.png)
 
