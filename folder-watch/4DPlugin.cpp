@@ -472,13 +472,16 @@ void listenerLoop()
 		
 		BOOL exit = FALSE;
 		
+        /* Current process returns 0 for PA_NewProcess */
+        PA_long32 currentProcessNumber = PA_GetCurrentProcessNumber();
+        
 		do {
 			DWORD count = WaitForMultipleObjects(signals.size(), &signals[0], FALSE, 16);//1 tick = 0.0166666
 			switch (count)
 			{
 				case WAIT_TIMEOUT:
 					PA_YieldAbsolute();
-					PA_PutProcessToSleep(PA_GetCurrentProcessNumber(), CALLBACK_SLEEP_TIME);//59 ticks
+					PA_PutProcessToSleep(currentProcessNumber, CALLBACK_SLEEP_TIME);//59 ticks
 					break;
 				case WAIT_FAILED:
 					exit = TRUE;
@@ -904,7 +907,7 @@ void listenerLoopExecuteMethod()
 		PA_SetStringVariable(&params[0], &method);
 
         /* execute method */
-		PA_ExecuteCommandByID(1007, params, 3);
+		PA_ExecuteCommandByID(1007, params, 4);
 		
 		PA_ClearVariable(&params[0]);
 		PA_ClearVariable(&params[1]);
