@@ -1,7 +1,6 @@
 [![language](https://img.shields.io/static/v1?label=language&message=4d&color=blue)](https://developer.4d.com/)
 [![license](https://img.shields.io/github/license/miyako/4d-plugin-folder-watch)](LICENSE)
-
-![size](https://img.shields.io/github/size/miyako/4d-plugin-folder-watch/Folder Watch.4dbase/Plugins/Folder Watch.bundle)
+![downloads](h/github/downloads/miyako/4d-plugin-folder-watch/total)
 
 
 
