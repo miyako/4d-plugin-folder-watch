@@ -1,8 +1,6 @@
 [![language](https://img.shields.io/static/v1?label=language&message=4d&color=blue)](https://developer.4d.com/)
 [![license](https://img.shields.io/github/license/miyako/4d-plugin-folder-watch)](LICENSE)
-[![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-folder-watch/total)]
-
-
+![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-folder-watch/total)
 
 # 4d-plugin-folder-watch
 Folder watch 4D plugin for Mac and Windows
