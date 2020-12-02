@@ -1,15 +1,13 @@
+![platform](https://img.shields.io/static/v1?label=platform&message=osx-64%20|%20win-32%20|%20win-64&color=blue)
+[![license](https://img.shields.io/github/license/miyako/4d-plugin-folder-watch)](LICENSE)
+![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-folder-watch/total)
+
 # 4d-plugin-folder-watch
-Folder watch 4D plugin for Mac and Windows
-
-### Platform
-
-| carbon | cocoa | win32 | win64 |
-|:------:|:-----:|:---------:|:---------:|
-||<img src="https://cloud.githubusercontent.com/assets/1725068/22371562/1b091f0a-e4db-11e6-8458-8653954a7cce.png" width="24" height="24" />|<img src="https://cloud.githubusercontent.com/assets/1725068/22371562/1b091f0a-e4db-11e6-8458-8653954a7cce.png" width="24" height="24" />|<img src="https://cloud.githubusercontent.com/assets/1725068/22371562/1b091f0a-e4db-11e6-8458-8653954a7cce.png" width="24" height="24" />|
+Watch 1 or more folder paths on the local file system
 
 ### Features
 
-Watch 1 or more folder paths on the local file system. Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath are also reported.
+Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath are also reported.
 
 ### Getting Started
 
@@ -28,7 +26,9 @@ On Windows, you must first cancel the running monitor. Calling ``FW Set watch pa
 
 Register a callback method with ``FW Set watch method``. 
 
-The callback method is called with 3 parameters; TEXT, REAL, **LONGINT**.
+The callback method is called with 3 parameters; TEXT, REAL, LONGINT.
+
+The file `manifest.json` is inside `/RESOURCES/`. To use on 4D v17 move it 1 level up.
 
 **Compatibility notice** v2 to v3: 
 
