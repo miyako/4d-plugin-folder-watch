@@ -26,7 +26,7 @@ On Windows, you must first cancel the running monitor. Calling ``FW Set watch pa
 
 Register a callback method with ``FW Set watch method``. 
 
-The callback method is called with 3 parameters; TEXT, REAL, **LONGINT**.
+The callback method is called with 3 parameters; TEXT, REAL, LONGINT.
 
 The file `manifest.json` is inside `/RESOURCES/`. To use on 4D v17 move it 1 level up.
 
