@@ -28,6 +28,8 @@ Register a callback method with ``FW Set watch method``.
 
 The callback method is called with 3 parameters; TEXT, REAL, **LONGINT**.
 
+The file `manifest.json` is inside `/RESOURCES/`. To use on 4D v17 move it 1 level up.
+
 **Compatibility notice** v2 to v3: 
 
 The 1st parameter has been changed to return a single path. Previously, it was a ``\n`` separated list.
