@@ -3,11 +3,11 @@
 ![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-folder-watch/total)
 
 # 4d-plugin-folder-watch
-Folder watch 4D plugin for Mac and Windows
+Watch 1 or more folder paths on the local file system
 
 ### Features
 
-Watch 1 or more folder paths on the local file system. Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath are also reported.
+Any changes (create, delete, update) will trigger your registered callback method. Changes to its subpath are also reported.
 
 ### Getting Started
 
