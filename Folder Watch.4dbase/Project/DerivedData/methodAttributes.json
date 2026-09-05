@@ -1,0 +1,22 @@
+{
+	"methods": {
+		"STOP": {
+			"timeStamp": "2026-09-05T05:31:17Z"
+		},
+		"GET": {
+			"timeStamp": "2026-09-05T05:31:17Z"
+		},
+		"FOLDER_METHOD_CALLED_ON_EVENT": {
+			"timeStamp": "2026-09-05T05:31:17Z",
+			"attributes": {
+				"invisible": true
+			}
+		},
+		"TEST_MULTI": {
+			"timeStamp": "2026-09-05T05:31:17Z"
+		},
+		"TEST_SINGLE": {
+			"timeStamp": "2026-09-05T05:31:17Z"
+		}
+	}
+}

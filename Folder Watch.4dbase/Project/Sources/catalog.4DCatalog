@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE base SYSTEM "http://www.4d.com/dtd/2007/base.dtd" >
+<base name="Folder Watch" uuid="30F20A15D5558348BD9812A1C6C8C23A" collation_locale="fr">
+	<schema name="DEFAULT_SCHEMA"/>
+	<table name="Table_1" uuid="E58775F79849419BA9A042F8BED3AFB4" id="1">
+		<field name="ID" uuid="D2EF92AF37424314A85B8C049B1EDBE3" type="4" unique="true" autosequence="true" not_null="true" id="1"/>
+		<field name="Field_2" uuid="355757669FD64909A4BDE8CCD94A7DBB" type="12" never_null="true" id="2"/>
+		<primary_key field_name="ID" field_uuid="D2EF92AF37424314A85B8C049B1EDBE3"/>
+		<table_extra input_form="Input" output_form="Output"/>
+	</table>
+	<index kind="regular" unique_keys="true" uuid="9D1288F7330B43E195ADF43A0C35DF8B" type="7">
+		<field_ref uuid="D2EF92AF37424314A85B8C049B1EDBE3" name="ID">
+			<table_ref uuid="E58775F79849419BA9A042F8BED3AFB4" name="Table_1"/>
+		</field_ref>
+	</index>
+	<base_extra data_file_path=":Folder Watch.4DD" package_name="Folder Watch" structure_file_name="Folder Watch"/>
+</base>

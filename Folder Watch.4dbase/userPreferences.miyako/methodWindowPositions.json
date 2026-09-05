@@ -1,0 +1,32 @@
+{
+	"Sources/Methods/FOLDER_METHOD_CALLED_ON_EVENT.4dm": {
+		"left": 541,
+		"top": 449,
+		"width": 945,
+		"height": 649
+	},
+	"Sources/Methods/TEST_SINGLE.4dm": {
+		"left": 223,
+		"top": 244,
+		"width": 676,
+		"height": 350
+	},
+	"Sources/Methods/STOP.4dm": {
+		"left": 270,
+		"top": 162,
+		"width": 719,
+		"height": 612
+	},
+	"Sources/Methods/TEST_MULTI.4dm": {
+		"left": 98,
+		"top": 228,
+		"width": 719,
+		"height": 697
+	},
+	"Sources/Methods/GET.4dm": {
+		"left": 56,
+		"top": 385,
+		"width": 719,
+		"height": 612
+	}
+}

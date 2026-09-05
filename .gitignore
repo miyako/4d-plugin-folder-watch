@@ -1,2 +1,3 @@
 *.DS_Store
 folder-watch/build/*
+build/*
