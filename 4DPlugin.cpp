@@ -106,7 +106,7 @@ namespace FW2
 #endif
     
     //constants
-	process_name_t MONITOR_PROCESS_NAME = (PA_Unichar *)"$\0F\0O\0L\0D\0E\0R\0_\0W\0A\0T\0C\0H\0\0\0";
+	process_name_t MONITOR_PROCESS_NAME = (PA_Unichar *)u"$FOLDER_WATCH";
 	process_stack_size_t MONITOR_PROCESS_STACK_SIZE = 0;
 
     //context management
@@ -197,8 +197,6 @@ void gotEvent(FSEventStreamRef stream,
 							) {
 	
 	NSArray *paths = (NSArray *)(CFArrayRef)eventPaths;
-	NSMutableString *pathsString = [[NSMutableString alloc]init];
-	NSMutableArray *flags = [[NSMutableArray alloc]init];
 	
 	for(uint32_t i = 0; i < [paths count] ; ++i)
 	{
@@ -213,7 +211,7 @@ void gotEvent(FSEventStreamRef stream,
 			{
 				CUTF16String event_path = CUTF16String((const PA_Unichar *)&buf[0], len);
 				if(eventFlags[i] & kFSEventStreamEventFlagItemIsDir)
-					event_path += (const PA_Unichar *)":\0\0\0";
+					event_path += (const PA_Unichar *)u":";
 				
                 std::lock_guard<std::mutex> lock(globalMutex);
 				
@@ -240,7 +238,7 @@ bool IsProcessOnExit()
 	PA_long32 state, time;
 	PA_GetProcessInfo(PA_GetCurrentProcessNumber(), name, &state, &time);
 	CUTF16String procName(name.getUTF16StringPtr());
-	CUTF16String exitProcName((PA_Unichar *)"$\0x\0x\0\0\0");
+	CUTF16String exitProcName((PA_Unichar *)u"$xx");
 	return (!procName.compare(exitProcName));
 }
 
@@ -266,6 +264,15 @@ typedef struct
 	PA_Unichar a[40];//UUID
 	PA_Unichar b[40];//UUID	
 }Params;
+
+/* Builds a file-mapping name unique to one watcher thread's request/response pair,
+   derived from its already-unique antisignal UUID (params->b). Using a shared literal
+   name here would let concurrent doIt() threads (one per watched folder) race on the
+   same section. */
+static void buildParamOutName(const PA_Unichar *uuid, wchar_t *out, size_t outLen)
+{
+	_snwprintf_s(out, outLen, _TRUNCATE, L"PARAM_OUT_%s", (const wchar_t *)uuid);
+}
 
 unsigned __stdcall doIt(void *p)
 {
@@ -310,12 +317,15 @@ unsigned __stdcall doIt(void *p)
 					DWORD data_len = bytesReturned;
 					DWORD len = sizeof(data_len) + data_len;
 
+					wchar_t paramOutName[64];
+					buildParamOutName(params->b, paramOutName, _countof(paramOutName));
+
 					HANDLE fmOut = CreateFileMapping(
 						INVALID_HANDLE_VALUE,
 						NULL,
 						PAGE_READWRITE,
 						0, len,
-						L"PARAM_OUT");
+						paramOutName);
 					if (fmOut)
 					{
 						LPVOID bufOut = MapViewOfFile(fmOut, FILE_MAP_WRITE, 0, 0, len);
@@ -393,7 +403,11 @@ void listenerLoop()
 														 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 														 NULL,
 														 OPEN_EXISTING,
-														 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+														 FILE_FLAG_BACKUP_SEMANTICS, /* no FILE_FLAG_OVERLAPPED: ReadDirectoryChangesW
+														    below is always called with lpOverlapped=NULL, and that
+														    combination is undefined behavior per Microsoft's own
+														    documented I/O contract - this handle is used synchronously,
+														    so it should be opened that way. */
 														 NULL);
 			if (h != INVALID_HANDLE_VALUE)
 			{
@@ -428,15 +442,16 @@ void listenerLoop()
 				C_TEXT _b;
 				generateUuid(_b);
 				unsigned char *p;
-				DWORD data_len = _a.getUTF16Length() * sizeof(PA_Unichar);
+				DWORD data_len_a = _a.getUTF16Length() * sizeof(PA_Unichar);
+				DWORD data_len_b = _b.getUTF16Length() * sizeof(PA_Unichar);
 				memset(param->a, 0x0, sizeof(param->a));
 				memset(param->b, 0x0, sizeof(param->b));
 				try
 				{
 					p = (unsigned char *)_a.getUTF16StringPtr();
-					CopyMemory(param->a, p, data_len);
+					CopyMemory(param->a, p, min(data_len_a, (DWORD)sizeof(param->a)));
 					p = (unsigned char *)_b.getUTF16StringPtr();
-					CopyMemory(param->b, p, data_len);
+					CopyMemory(param->b, p, min(data_len_b, (DWORD)sizeof(param->b)));
 				}
 				catch (...)
 				{
@@ -487,8 +502,14 @@ void listenerLoop()
 					exit = TRUE;
 					break;
 				default:
-					for(DWORD i = count-WAIT_OBJECT_0; i < signals.size();++i)
 					{
+						/* WaitForMultipleObjects(..., bWaitAll=FALSE) only guarantees that ONE
+						   handle (the lowest-indexed signaled one) is ready - it does not mean
+						   every handle from that index onward is also signaled. Only process
+						   the specific index that was actually reported. */
+						DWORD i = count - WAIT_OBJECT_0;
+						if (i < signals.size())
+						{
 						HANDLE h = signals[i];
 						CUTF16String path = folderpaths[i];
 						ResetEvent(h);
@@ -497,12 +518,15 @@ void listenerLoop()
 						DWORD len = sizeof(data_len);
 						BOOL success = FALSE;
 						
+						wchar_t paramOutName[64];
+						buildParamOutName((const PA_Unichar *)antisignalnames.at(i).c_str(), paramOutName, _countof(paramOutName));
+
 						HANDLE fmOut = CreateFileMapping(
 																						 INVALID_HANDLE_VALUE,
 																						 NULL,
 																						 PAGE_READWRITE,
 																						 0, len,
-																						 L"PARAM_OUT");
+																						 paramOutName);
 				
 						if (fmOut)
 						{
@@ -532,7 +556,7 @@ void listenerLoop()
 																				NULL,
 																				PAGE_READWRITE,
 																				0, len,
-																				L"PARAM_OUT");
+																				paramOutName);
 							if (fmOut)
 							{
 								LPVOID bufOut = MapViewOfFile(fmOut, FILE_MAP_READ, 0, 0, len);
@@ -603,7 +627,7 @@ void listenerLoop()
 
 												if (1)
 												{
-//                                                    std::lock_guard<std::mutex> lock(globalMutex);
+                                                    std::lock_guard<std::mutex> lock(globalMutex);
 													
 													FW2::CALLBACK_EVENT_IDS.push_back(ts);
 													FW2::CALLBACK_EVENT_PATHS.push_back(event_path);
@@ -615,7 +639,12 @@ void listenerLoop()
 											}
 											nextEntryOffset = fni->NextEntryOffset;
 											pos += nextEntryOffset;
-											
+
+											if (!nextEntryOffset)
+												break;
+											if (pos + sizeof(FILE_NOTIFY_INFORMATION) > buf.size())
+												break; /* malformed/short buffer - stop rather than read past it */
+
 											fni = (FILE_NOTIFY_INFORMATION *)&buf.at(pos);
 
 										} while (nextEntryOffset);
@@ -639,6 +668,7 @@ void listenerLoop()
 						{
 							SetEvent(antisignal);
 							CloseHandle(antisignal);
+						}
 						}
 					}
 					break;
@@ -983,6 +1013,8 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
     C_LONGINT Param2;
 		C_LONGINT returnValue;
 	
+	try
+	{
 	if(!IsProcessOnExit())
 	{
 		Param1.fromParamAtIndex(pParams, 1);
@@ -1060,7 +1092,7 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 					FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
 					FW2::WATCH_PATHS_POSIX.appendUTF16String(path);
 #else
-					FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)"\0\0", 0);
+					FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)u"", 0);
 					FW2::WATCH_PATHS.appendUTF16String(&path);
 #endif
 				}
@@ -1078,6 +1110,11 @@ void FW_Set_watch_path(sLONG_PTR *pResult, PackagePtr pParams)
 		}
 		
 	}
+	}
+	catch(...)
+	{
+		returnValue.setIntValue(MONITOR_FOLDER_INTERNAL_ERROR);
+	}
 	
 	returnValue.setReturn(pResult);
 }
@@ -1087,6 +1124,8 @@ void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
 	C_TEXT Param1;
 	C_LONGINT returnValue;
 	
+	try
+	{
 	Param1.fromParamAtIndex(pParams, 1);
 	
     if(1)
@@ -1095,13 +1134,18 @@ void FW_Set_watch_method(sLONG_PTR *pResult, PackagePtr pParams)
         
         if(!Param1.getUTF16Length())
         {
-            FW2::WATCH_METHOD.setUTF16String((PA_Unichar *)"\0\0", 0);
+            FW2::WATCH_METHOD.setUTF16String((PA_Unichar *)u"", 0);
         }else{
             FW2::WATCH_METHOD.setUTF16String(Param1.getUTF16StringPtr(), Param1.getUTF16Length());
         }
     }
 
 	returnValue.setIntValue(1);
+	}
+	catch(...)
+	{
+		returnValue.setIntValue(MONITOR_FOLDER_INTERNAL_ERROR);
+	}
 	returnValue.setReturn(pResult);
 }
 
@@ -1111,6 +1155,8 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 	C_LONGINT Param2;
 	C_LONGINT returnValue;
 	
+	try
+	{
 	if(!IsProcessOnExit())
 	{
 		Param1.fromParamAtIndex(pParams, 1);
@@ -1137,6 +1183,7 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 		}else{
 			
 			uint32_t i, length = Param1.getSize();
+			bool anyError = false;
 	
 			if(1)
 			{
@@ -1148,7 +1195,7 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 				FW2::WATCH_PATHS_POSIX.setSize(0);
 				FW2::WATCH_PATHS_POSIX.appendUTF16String(@"");
 #else
-				FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)"\0\0", 0);
+				FW2::WATCH_PATHS.appendUTF16String((const PA_Unichar *)u"", 0);
 #endif
 			}
 			
@@ -1171,10 +1218,12 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 						}else
 						{
 							returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
+							anyError = true;
 						}
 					}else
 					{
 						returnValue.setIntValue(MONITOR_FOLDER_INVALID_PATH_ERROR);
+						anyError = true;
 					}
 					[pathHFS release];
 					[path release];
@@ -1192,10 +1241,12 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 						}else
 						{
 							returnValue.setIntValue(MONITOR_FOLDER_NOT_FOLDER_ERROR);
+							anyError = true;
 						}
 					}else
 					{
 						returnValue.setIntValue(MONITOR_FOLDER_INVALID_PATH_ERROR);
+						anyError = true;
 					}
 #endif
 				}
@@ -1207,7 +1258,13 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 				{
                     std::lock_guard<std::mutex> lock(globalMutex);
 					
-					returnValue.setIntValue(1);
+					/* Only report success if every path in the batch was valid - a
+					   previous version unconditionally set 1 here, silently discarding
+					   whichever error code an earlier invalid path had set even though
+					   that path was dropped from the watch list. Valid paths are still
+					   watched either way. */
+					if(!anyError)
+						returnValue.setIntValue(1);
 					
 					FW2::MONITOR_LATENCY = Param2.getIntValue();
 					if(FW2::MONITOR_LATENCY < 1)
@@ -1228,6 +1285,11 @@ void FW_Set_watch_paths(sLONG_PTR *pResult, PackagePtr pParams)
 
 		}
 		
+	}
+	}
+	catch(...)
+	{
+		returnValue.setIntValue(MONITOR_FOLDER_INTERNAL_ERROR);
 	}
 	
 	returnValue.setReturn(pResult);

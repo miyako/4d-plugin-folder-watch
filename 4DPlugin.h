@@ -11,6 +11,8 @@
 #if VERSIONWIN
 #include <Shlwapi.h>
 #include <process.h>
+#include <wchar.h>
+#include <stdlib.h>
 #define BUF_SIZE 32768 /* max=64KB */
 #endif
 #include <mutex>
@@ -39,6 +41,7 @@ typedef PA_Unichar* process_name_t;
 #define MONITOR_FOLDER_NOT_FOLDER_ERROR (-1)
 #define MONITOR_FOLDER_INVALID_PATH_ERROR (-2)
 #define MONITOR_FOLDER_INVALID_METHOD_NAME_ERROR (-3)
+#define MONITOR_FOLDER_INTERNAL_ERROR (-4) /* an exception was thrown and caught locally - see PluginMain's outer catch(...) */
 
 #if VERSIONMAC
 void gotEvent(FSEventStreamRef stream,
