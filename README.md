@@ -137,6 +137,8 @@ C_LONGINT($3;$flags)
 | `$2` | Real | Unix timestamp of the change. |
 | `$3` | Longint | Bitmask describing what happened — see the flag table under [FW Set watch paths](#fw-set-watch-paths) below. |
 
+The plugin releases the callback parameters after each call, and it also releases any value the method returns, so the method can return a result without leaking memory. In 3.9.3 and earlier, each event leaked one empty text owner (two when the method is called through `EXECUTE METHOD`, e.g. a method shared by a component), plus the method result. The [ownership harness](tests/ownership/README.md) checks this ([#2](https://github.com/miyako/4d-plugin-folder-watch/issues/2)).
+
 ### Example
 
 ```4d

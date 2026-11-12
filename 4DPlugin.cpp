@@ -906,7 +906,8 @@ void listenerLoopExecuteMethod()
 	if(methodId)
 	{
 		PA_Variable	params[3];
-		params[0] = PA_CreateVariable(eVK_Unistring);
+		/* eVK_Undefined: PA_SetStringVariable is shallow and would leak an eVK_Unistring owner */
+		params[0] = PA_CreateVariable(eVK_Undefined);
 		params[1] = PA_CreateVariable(eVK_Real);
 		params[2] = PA_CreateVariable(eVK_Longint);
 		PA_Unistring path = PA_CreateUnistring((PA_Unichar *)event_path.c_str());
@@ -915,15 +916,20 @@ void listenerLoopExecuteMethod()
 		PA_SetRealVariable(&params[1], ts);
 		PA_SetLongintVariable(&params[2], event_flag);
 		
-		PA_ExecuteMethodByID(methodId, params, 3);
+		PA_Variable result = PA_ExecuteMethodByID(methodId, params, 3);
+		/* capture before PA_ClearVariable resets the last error */
+		PA_ErrorCode err = PA_GetLastError();
 		
 		PA_ClearVariable(&params[0]);
 		PA_ClearVariable(&params[1]);
 		PA_ClearVariable(&params[2]);
+		
+		if(err == eER_NoErr)
+			PA_ClearVariable(&result);
 	}else
 	{
 		PA_Variable	params[4];
-		params[1] = PA_CreateVariable(eVK_Unistring);
+		params[1] = PA_CreateVariable(eVK_Undefined);
 		params[2] = PA_CreateVariable(eVK_Real);
 		params[3] = PA_CreateVariable(eVK_Longint);
 		PA_Unistring path = PA_CreateUnistring((PA_Unichar *)event_path.c_str());
@@ -932,7 +938,7 @@ void listenerLoopExecuteMethod()
 		PA_SetRealVariable(&params[2], ts);
 		PA_SetLongintVariable(&params[3], event_flag);
 		
-		params[0] = PA_CreateVariable(eVK_Unistring);
+		params[0] = PA_CreateVariable(eVK_Undefined);
 		PA_Unistring method = PA_CreateUnistring((PA_Unichar *)FW2::WATCH_METHOD.getUTF16StringPtr());
 		PA_SetStringVariable(&params[0], &method);
 
